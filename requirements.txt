@@ -1,0 +1,7 @@
+chromadb
+mistralai
+pdfplumber
+python-dotenv
+spacy
+pymupdf
+
