@@ -3,12 +3,13 @@ import uuid
 from pathlib import Path
 from typing import Optional, Dict
 
-from .models import LegalDocumentMetadata
+from .models import DocumentMetadata
 from .loaders import PDFLoader, XMLLoader, JSONLoader
 from .extractors import LLMMetadataExtractor
 from .chunkers import StructuralLegalChunker
 from .indexing import LegalCorpusIndexer
 from .retrieval import ParentDocumentRetriever
+from .config import DOMAIN
 
 def sliding_window_splitter(text, chunk_size, overlap):
     """
@@ -89,18 +90,20 @@ class LegalIngestionPipeline:
         
         # 2. Métadonnées
         if doc_type == 'pdf':
-             legal_meta = self.metadata_extractor.extract_legal_metadata(raw_text)
-             metadata = LegalDocumentMetadata(
+             extracted_meta = self.metadata_extractor.extract_legal_metadata(raw_text)
+             metadata = DocumentMetadata(
                 document_id=f"{meta_key}_{Path(file_path).stem}_{uuid.uuid4().hex[:8]}",
                 source_file=loader_output['metadata']['source_file'],
                 source_type=meta_key,
-                **legal_meta
+                domain=DOMAIN,
+                **extracted_meta
             )
         elif doc_type == 'xml':
-             metadata = LegalDocumentMetadata(
+             metadata = DocumentMetadata(
                 document_id=f"{meta_key}_{Path(file_path).stem}_{uuid.uuid4().hex[:8]}",
                 source_file=loader_output['source_file'],
                 source_type=meta_key,
+                domain=DOMAIN,
                 juridiction=loader_output['metadata'].get('juridiction'),
                 date_decision=loader_output['metadata'].get('date'),
                 numero_pourvoi=loader_output['metadata'].get('numero'),
@@ -108,13 +111,13 @@ class LegalIngestionPipeline:
                 type_document='ordonnance'
             )
         elif doc_type == 'json':
-             metadata = LegalDocumentMetadata(
+             metadata = DocumentMetadata(
                 document_id=f"{meta_key}_{Path(file_path).stem}_{uuid.uuid4().hex[:8]}",
                 source_file=loader_output['metadata']['source_file'],
                 source_type=meta_key,
+                domain=DOMAIN,
                 date_decision=loader_output['metadata'].get('date'),
-                juridiction=loader_output['metadata'].get('juridiction'),
-                type_document='audience_metadata'
+                type_document='document_json'
             )
 
         # 3. Chunking & Indexation selon stratégie

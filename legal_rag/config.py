@@ -6,6 +6,10 @@ from chromadb.config import Settings
 EMBED_MODEL = "nomic-embed-text"   # 768 dims, multilingue
 GENERATION_MODEL = "mistral"        # 7B, bon sur le français
 
+# Domaine du corpus
+# Options : "legal", "municipal", "medical", "rh", "technique"
+DOMAIN = "municipal"
+
 chroma_client = chromadb.PersistentClient(
     path="./chroma_legal_db",
     settings=Settings(
