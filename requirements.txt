@@ -1,5 +1,5 @@
 chromadb
-mistralai
+ollama
 pdfplumber
 python-dotenv
 spacy

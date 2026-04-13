@@ -1,28 +1,26 @@
 import json
 from typing import Dict, Any
 from datetime import datetime
-from .config import mistral_client
+import ollama
+from .config import GENERATION_MODEL
 
 class LLMMetadataExtractor:
     """
-    Extraction de métadonnées juridiques par LLM.
-    
+    Extraction de métadonnées par LLM local (Ollama).
+
     Principe: On donne les 1500 premiers caractères du document au LLM
-    et on lui demande d'extraire les métadonnées structurées.
+    et on lui demande d'extraire les métadonnées structurées en JSON.
     """
-    
+
     @staticmethod
     def extract_legal_metadata(text: str, source_type: str = "pdf") -> Dict[str, Any]:
         """
         Extraction structurée de métadonnées par LLM.
         """
         print("  🤖 Extraction métadonnées par LLM...")
-        
-        # Prompt adapté aux documents juridiques français
-        prompt = f"""Tu es un expert en analyse de documents juridiques français.
 
-Voici le début d'un document juridique (arrêt, jugement, ou ordonnance).
-Extrait les métadonnées suivantes sous forme JSON stricte.
+        prompt = f"""Tu es un expert en analyse de documents.
+Voici le début d'un document. Extrait les métadonnées suivantes sous forme JSON stricte.
 
 RÈGLES CRITIQUES:
 - Si une information est absente, mets null (pas de chaîne vide)
@@ -51,40 +49,33 @@ DOCUMENT:
 RÉPONDS UNIQUEMENT AVEC LE JSON, AUCUN TEXTE AVANT OU APRÈS."""
 
         try:
-            # Appel Mistral avec mode JSON forcé
-            response = mistral_client.chat.complete(
-                model="mistral-small-latest",
+            response = ollama.chat(
+                model=GENERATION_MODEL,
                 messages=[{"role": "user", "content": prompt}],
-                response_format={"type": "json_object"},
-                temperature=0.0  # Déterministe pour extraction
+                format="json",
+                options={"temperature": 0.0}
             )
-            
-            # Parsing de la réponse
-            metadata_str = response.choices[0].message.content
+
+            metadata_str = response.message.content
             metadata = json.loads(metadata_str)
-            
-            # Validation et nettoyage
             metadata = LLMMetadataExtractor._validate_metadata(metadata)
-            
+
             print(f"  ✅ Métadonnées extraites: {metadata.get('reference_complete', 'N/A')}")
-            
             return metadata
-        
+
         except json.JSONDecodeError as e:
             print(f"  ⚠️ Erreur parsing JSON LLM: {e}")
-            print(f"  Réponse brute: {metadata_str[:200]}")
             return {}
-        
+
         except Exception as e:
             print(f"  ⚠️ Erreur extraction LLM: {e}")
             return {}
-    
+
     @staticmethod
     def _validate_metadata(metadata: Dict) -> Dict:
         """
         Validation et normalisation des métadonnées extraites.
         """
-        # Normalisation du dispositif (vocabulaire contrôlé)
         dispositif_mapping = {
             'cassation': 'Cassation',
             'rejet': 'Rejet',
@@ -94,24 +85,22 @@ RÉPONDS UNIQUEMENT AVEC LE JSON, AUCUN TEXTE AVANT OU APRÈS."""
             'confirmation': 'Confirmation',
             'infirmation': 'Infirmation'
         }
-        
+
         if metadata.get('dispositif'):
             dispositif_lower = metadata['dispositif'].lower()
             metadata['dispositif'] = dispositif_mapping.get(
-                dispositif_lower, 
+                dispositif_lower,
                 metadata['dispositif']
             )
-        
-        # Validation de la date (format ISO)
+
         if metadata.get('date_decision'):
             try:
                 datetime.fromisoformat(metadata['date_decision'])
             except ValueError:
                 print(f"  ⚠️ Date invalide: {metadata['date_decision']}")
                 metadata['date_decision'] = None
-        
-        # Extraction de l'année si pas fournie
+
         if not metadata.get('annee_decision') and metadata.get('date_decision'):
             metadata['annee_decision'] = metadata['date_decision'][:4]
-        
+
         return metadata

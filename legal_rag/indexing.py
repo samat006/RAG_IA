@@ -1,6 +1,7 @@
 from typing import List, Dict, Any, Optional
+import ollama
 from .models import LegalDocumentMetadata
-from .config import chroma_client, mistral_client
+from .config import chroma_client, EMBED_MODEL
 
 class ContextualEnricher:
     """Enrichissement contextuel des chunks."""
@@ -47,7 +48,7 @@ class ContextualEnricher:
 
 class LegalCorpusIndexer:
     """
-    Indexation dans ChromaDB avec embeddings Mistral.
+    Indexation dans ChromaDB avec embeddings Ollama (nomic-embed-text).
     """
     
     def __init__(self, collection_name: str = "legal_corpus_v1"):
@@ -73,23 +74,18 @@ class LegalCorpusIndexer:
     
     def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
         """
-        Génération embeddings via Mistral.
-        
-        Modèle: mistral-embed (1024 dims)
+        Génération embeddings via Ollama (local, gratuit).
+
+        Modèle: nomic-embed-text (768 dims, multilingue)
         """
         print(f"     🧠 Embedding {len(texts)} chunks...")
-        
+
         try:
-            response = mistral_client.embeddings.create(
-                model="mistral-embed",
-                inputs=texts
-            )
-            
-            embeddings = [item.embedding for item in response.data]
+            response = ollama.embed(model=EMBED_MODEL, input=texts)
+            embeddings = response.embeddings
             print(f"    ✅ {len(embeddings)} embeddings générés")
-            
             return embeddings
-        
+
         except Exception as e:
             print(f"    ❌ Erreur embedding: {e}")
             raise
