@@ -4,4 +4,4 @@ pdfplumber
 python-dotenv
 spacy
 pymupdf
-
+ragas
