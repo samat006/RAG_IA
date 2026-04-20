@@ -8,7 +8,7 @@ GENERATION_MODEL = "mistral"        # 7B, bon sur le français
 
 # Domaine du corpus
 # Options : "legal", "municipal", "medical", "rh", "technique"
-DOMAIN = "municipal"
+DOMAIN = "tourisme"
 
 chroma_client = chromadb.PersistentClient(
     path="./chroma_legal_db",

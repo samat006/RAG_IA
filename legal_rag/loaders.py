@@ -7,7 +7,7 @@ import fitz  # PyMuPDF
 
 class PDFLoader:
     """
-    Loader PDF pour documents juridiques.
+    Loader PDF pour documents.
     
     Utilise PyMuPDF (fitz) pour:
     - Extraction de texte robuste (compatible vieux PDF)

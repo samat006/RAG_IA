@@ -4,7 +4,7 @@ from .indexing import LegalCorpusIndexer
 
 class ParentDocumentRetriever:
     """
-    BONUS: Implémentation du Parent Document Retriever.
+     Implémentation du Parent Document Retriever.
     
     Principe:
     - Petits chunks (enfants) → Indexés pour recherche précise (vectorielle)

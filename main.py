@@ -55,15 +55,16 @@ def display_results(results: Dict):
 
 def main():
     """
-    Script principal du TP avec CLI.
+    Script principal avec CLI.
     """
     parser = argparse.ArgumentParser(description="TP Session 3 - Data Ingestion Pipeline")
     parser.add_argument("--retriever", choices=["recursive", "parent-child"], default="recursive", help="Type de retriever à utiliser")
-    parser.add_argument("--corpus", default="./documents_juridiques/test", help="Chemin vers le dossier de documents")
+    parser.add_argument("--corpus", default="./documents"
+    "/test", help="Chemin vers le dossier de documents")
     
     args = parser.parse_args()
     
-    print_header("🏛️  TP SESSION 3 - DATA INGESTION PIPELINE")
+    print_header("🏛️ DATA INGESTION PIPELINE")
     print(f"    Mode: {Colors.BOLD}{args.retriever.upper()}{Colors.ENDC}")
     
     # Initialisation du pipeline
@@ -87,10 +88,10 @@ def main():
     print_header("🔍 TESTS DE RECHERCHE & GÉNÉRATION")
     
     queries = [
-        "Pourquoi le pourvoi de M. Z… est-il déclaré irrecevable ?",
-        "Quel texte juridique permet à la Cour de cassation de déclarer ce pourvoi irrecevable ?",
-        "pourvoi formé par M. X"
-        "Quel article dit nul ne peut se pourvoir en cassation contre une décision à laquelle il n’a pas été partie ?"
+        "Dès la saison 2024 s’ouvre une nouvelle page de l’avenir du site classé de la Restonica à la suite desdégâts causés par le passage des tempêtes Ciaran et Domingos de novembre 2023 (*) ?",
+     #   "Quel texte juridique permet à la Cour de cassation de déclarer ce pourvoi irrecevable ?",
+      #  "pourvoi formé par M. X"
+      #  "Quel article dit nul ne peut se pourvoir en cassation contre une décision à laquelle il n’a pas été partie ?"
     ]
     context="Arrêt Cass. 2e civ., 12 octobre 1989, n° 89-61.262 La Cour de cassation, deuxième chambre civile, a statué le 12 octobre 1989 sur un pourvoi formé par M. Gérard Z, résidant à Ucciani (Corse). Le pourvoi visait un jugement du tribunal d’instance d’Ajaccio rendu le 11 mars 1989 en matière électorale, favorable à Mme X Y épouse A, résidant à Ajaccio."
 

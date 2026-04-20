@@ -67,7 +67,7 @@ class LegalCorpusIndexer:
         
         collection = chroma_client.get_or_create_collection(
             name=self.collection_name,
-            metadata={"description": "Corpus juridique français - Master 2 TP"}
+            metadata={"description": "projet document légal chunké avec enrichissement contextuel"} 
         )
         
         return collection

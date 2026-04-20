@@ -41,6 +41,13 @@ DOMAIN_PATTERNS = {
         'specification':   r'(?:Spécification|Cahier des charges)',
         'conclusion':      r'(?:Conclusion\s*:|Résumé\s*:)',
     },
+    "tourisme": {
+        'presentation':    r'(?:Présentation\s*:|Description\s*:)',
+        'historique':      r'(?:Historique\s*:|Histoire\s*:)',
+        'attractions':     r'(?:Attractions\s*:|Points d\'intérêt\s*:)',
+        'acces':           r'(?:Accès\s*:|Comment\s+venir\s*:)',
+        'contact':         r'(?:Contact\s*:|Informations\s+pratiques\s*:)',
+    }
 }
 
 
