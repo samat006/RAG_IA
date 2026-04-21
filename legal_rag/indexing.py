@@ -13,36 +13,37 @@ class ContextualEnricher:
         chunk_type: str = "unknown"
     ) -> str:
         """
-        Ajout d'un préfixe contextuel au chunk.
-        
-        Format: [Référence | Dispositif | Type de section]
+        Ajout d'un préfixe contextuel au chunk — uniquement si les métadonnées
+        apportent une vraie information (pas de null inutiles).
         """
         context_parts = []
-        
-        # 1. Référence complète (le plus important)
-        if metadata.reference_complete:
+
+        # 1. Référence complète (documents juridiques)
+        if metadata.reference_complete and metadata.reference_complete != "null":
             context_parts.append(metadata.reference_complete)
-        elif metadata.juridiction:
+        elif metadata.juridiction and metadata.juridiction != "null":
             ref = metadata.juridiction
-            if metadata.date_decision:
+            if metadata.date_decision and metadata.date_decision != "null":
                 ref += f", {metadata.date_decision}"
-            if metadata.numero_pourvoi:
+            if metadata.numero_pourvoi and metadata.numero_pourvoi != "null":
                 ref += f", n° {metadata.numero_pourvoi}"
             context_parts.append(ref)
-        
-        # 2. Dispositif (très discriminant)
-        if metadata.dispositif:
+
+        # 2. Dispositif (uniquement si présent et non null)
+        if metadata.dispositif and metadata.dispositif != "null":
             context_parts.append(f"Dispositif: {metadata.dispositif}")
-        
-        # 3. Type de section (optionnel, contexte additionnel)
-        if chunk_type not in ['unknown', 'recursive', 'full_document']:
+
+        # 3. Type de section (uniquement si informatif)
+        meaningful_types = {'procedure', 'recevabilite', 'motifs', 'dispositif',
+                            'historique', 'attractions', 'presentation'}
+        if chunk_type in meaningful_types:
             context_parts.append(f"Section: {chunk_type}")
-        
-        # Assemblage
+
+        # On n'ajoute le préfixe que s'il apporte vraiment du contexte
         if context_parts:
             prefix = "[" + " | ".join(context_parts) + "]"
             return f"{prefix}\n\n{chunk_text}"
-        
+
         return chunk_text
 
 

@@ -42,11 +42,12 @@ DOMAIN_PATTERNS = {
         'conclusion':      r'(?:Conclusion\s*:|Résumé\s*:)',
     },
     "tourisme": {
-        'presentation':    r'(?:Présentation\s*:|Description\s*:)',
-        'historique':      r'(?:Historique\s*:|Histoire\s*:)',
-        'attractions':     r'(?:Attractions\s*:|Points d\'intérêt\s*:)',
-        'acces':           r'(?:Accès\s*:|Comment\s+venir\s*:)',
-        'contact':         r'(?:Contact\s*:|Informations\s+pratiques\s*:)',
+        'presentation':    r'(?:Présentation\s*:|Description\s*:|Zoom sur)',
+        'historique':      r'(?:Historique\s*:|Histoire\s*:|patrimoine)',
+        'attractions':     r'(?:Les\s+incontournables|Points\s+d\'intérêt\s*:|À\s+voir\s*:)',
+        'activites':       r'(?:Activités\s*:|Sports\s*:|Loisirs\s*:|Randonnée)',
+        'acces':           r'(?:Accès\s*:|Comment\s+venir\s*:|Horaires\s*:)',
+        'hebergement':     r'(?:Hébergements?\s*:|Hôtels?\s*:|Restaurants?\s*:)',
     }
 }
 
