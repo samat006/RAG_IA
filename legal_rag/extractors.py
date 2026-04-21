@@ -97,7 +97,7 @@ class LLMMetadataExtractor:
     """
 
     @staticmethod
-    def extract_legal_metadata(text: str, source_type: str = "pdf") -> Dict[str, Any]:
+    def extract_metadata_from_text(text: str, source_type: str = "pdf") -> Dict[str, Any]:
         """
         Extraction structurée de métadonnées — délègue au domaine actif.
         Nom conservé pour rétrocompatibilité des imports.
@@ -110,7 +110,7 @@ class LLMMetadataExtractor:
         Extraction générique selon le domaine.
         """
         active_domain = domain or DOMAIN
-        cfg = EXTRACTION_PROMPTS.get(active_domain, EXTRACTION_PROMPTS["legal"])
+        cfg = EXTRACTION_PROMPTS.get(active_domain, EXTRACTION_PROMPTS["tourisme"])
 
         print(f"  🤖 Extraction métadonnées [{active_domain.upper()}] par LLM...")
 

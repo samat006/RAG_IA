@@ -1,6 +1,6 @@
 from typing import List, Dict, Any
 from .config import chroma_client
-from .indexing import LegalCorpusIndexer
+from .indexing import CorpusIndexer
 
 class ParentDocumentRetriever:
     """
@@ -33,7 +33,7 @@ class ParentDocumentRetriever:
             metadata={"description": "Parents (gros chunks) pour contexte"}
         )
         
-        self.indexer = LegalCorpusIndexer(collection_name=collection_name_children)
+        self.indexer = CorpusIndexer(collection_name=collection_name_children)
 
     def index_with_hierarchy(
         self,

@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Optional
 import ollama
-from .models import LegalDocumentMetadata
+from .models import DocumentMetadata
 from .config import chroma_client, EMBED_MODEL
 
 class ContextualEnricher:
@@ -9,29 +9,31 @@ class ContextualEnricher:
     @staticmethod
     def enrich_chunk(
         chunk_text: str,
-        metadata: LegalDocumentMetadata,
+        metadata: DocumentMetadata,
         chunk_type: str = "unknown"
     ) -> str:
         """
         Ajout d'un préfixe contextuel au chunk — uniquement si les métadonnées
         apportent une vraie information (pas de null inutiles).
         """
+        from .config import DOMAIN
         context_parts = []
 
-        # 1. Référence complète (documents juridiques)
-        if metadata.reference_complete and metadata.reference_complete != "null":
-            context_parts.append(metadata.reference_complete)
-        elif metadata.juridiction and metadata.juridiction != "null":
-            ref = metadata.juridiction
-            if metadata.date_decision and metadata.date_decision != "null":
-                ref += f", {metadata.date_decision}"
-            if metadata.numero_pourvoi and metadata.numero_pourvoi != "null":
-                ref += f", n° {metadata.numero_pourvoi}"
-            context_parts.append(ref)
+        # 1. Référence complète (documents juridiques uniquement)
+        if DOMAIN not in ("tourisme", "municipal", "rh", "medical"):
+            if metadata.reference_complete and metadata.reference_complete != "null":
+                context_parts.append(metadata.reference_complete)
+            elif metadata.juridiction and metadata.juridiction != "null":
+                ref = metadata.juridiction
+                if metadata.date_decision and metadata.date_decision != "null":
+                    ref += f", {metadata.date_decision}"
+                if metadata.numero_pourvoi and metadata.numero_pourvoi != "null":
+                    ref += f", n° {metadata.numero_pourvoi}"
+                context_parts.append(ref)
 
-        # 2. Dispositif (uniquement si présent et non null)
+        # 2. Résultat/décision (uniquement si présent et non null)
         if metadata.dispositif and metadata.dispositif != "null":
-            context_parts.append(f"Dispositif: {metadata.dispositif}")
+            context_parts.append(f"Résultat: {metadata.dispositif}")
 
         # 3. Type de section (uniquement si informatif)
         meaningful_types = {'procedure', 'recevabilite', 'motifs', 'dispositif',
@@ -47,12 +49,12 @@ class ContextualEnricher:
         return chunk_text
 
 
-class LegalCorpusIndexer:
+class CorpusIndexer:
     """
     Indexation dans ChromaDB avec embeddings Ollama (nomic-embed-text).
     """
-    
-    def __init__(self, collection_name: str = "legal_corpus_v1"):
+
+    def __init__(self, collection_name: str = "corpus_v1"):
         self.collection_name = collection_name
         self.collection = self._init_collection()
         self.enricher = ContextualEnricher()
@@ -68,7 +70,7 @@ class LegalCorpusIndexer:
         
         collection = chroma_client.get_or_create_collection(
             name=self.collection_name,
-            metadata={"description": "projet document légal chunké avec enrichissement contextuel"} 
+            metadata={"description": "corpus de documents avec enrichissement contextuel"}
         )
         
         return collection

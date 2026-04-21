@@ -52,7 +52,7 @@ DOMAIN_PATTERNS = {
 }
 
 
-class StructuralLegalChunker:
+class StructuralChunker:
     """
     Chunker structurel multi-domaine.
 
@@ -75,7 +75,7 @@ class StructuralLegalChunker:
 
         # Domaine : paramètre explicite > config globale > fallback legal
         active_domain = domain or DOMAIN
-        self.section_patterns = DOMAIN_PATTERNS.get(active_domain, DOMAIN_PATTERNS["legal"])
+        self.section_patterns = DOMAIN_PATTERNS.get(active_domain, DOMAIN_PATTERNS["tourisme"])
         print(f"  🗂️  Chunker initialisé — domaine : {active_domain.upper()}")
 
     def chunk_document(

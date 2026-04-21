@@ -12,7 +12,7 @@ import os
 
 sys.path.insert(0, os.path.dirname(__file__))
 from legal_rag.config import chroma_client, EMBED_MODEL
-from legal_rag.indexing import LegalCorpusIndexer
+from legal_rag.indexing import CorpusIndexer
 
 SEPARATOR = "=" * 70
 
@@ -90,7 +90,7 @@ def search_collection(collection_name: str, query: str, n_results: int = 5, max_
     print(f"Collection: {collection_name}  |  top-{n_results}  |  distance ≤ {max_distance}")
     print(SEPARATOR)
 
-    indexer = LegalCorpusIndexer(collection_name=collection_name)
+    indexer = CorpusIndexer(collection_name=collection_name)
     results = indexer.search(query, n_results=n_results)
 
     if not results["ids"][0]:

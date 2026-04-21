@@ -6,8 +6,8 @@ from typing import Optional, Dict
 from .models import DocumentMetadata
 from .loaders import PDFLoader, XMLLoader, JSONLoader
 from .extractors import LLMMetadataExtractor
-from .chunkers import StructuralLegalChunker
-from .indexing import LegalCorpusIndexer
+from .chunkers import StructuralChunker
+from .indexing import CorpusIndexer
 from .retrieval import ParentDocumentRetriever
 from .config import DOMAIN
 
@@ -41,33 +41,30 @@ def sliding_window_splitter(text, chunk_size, overlap):
             
     return chunks
 
-class LegalIngestionPipeline:
+class IngestionPipeline:
     """
-    Pipeline complet d'ingestion pour corpus juridique.
+    Pipeline complet d'ingestion pour tout type de corpus.
     """
-    
-    def __init__(self, collection_name: str = "legal_corpus_tp", retriever_type: str = "recursive"):
+
+    def __init__(self, collection_name: str = "corpus_tp", retriever_type: str = "recursive"):
         self.retriever_type = retriever_type
         self.collection_name = collection_name
-        
-        # Chunker standard
-        self.chunker = StructuralLegalChunker(
+
+        self.chunker = StructuralChunker(
             max_chunk_size=800,
             min_chunk_size=100,
             overlap=100
         )
-        
+
         self.metadata_extractor = LLMMetadataExtractor()
-        
-        # Initialisation selon le type de retriever
+
         if self.retriever_type == "parent-child":
             self.parent_retriever = ParentDocumentRetriever(
                 collection_name_children=f"{collection_name}_children",
                 collection_name_parents=f"{collection_name}_parents"
             )
-            # Note: Le chunker spécifique n'est plus utilisé ici, on utilise sliding_window_splitter
         else:
-            self.indexer = LegalCorpusIndexer(collection_name=collection_name)
+            self.indexer = CorpusIndexer(collection_name=collection_name)
 
     def ingest_document(self, file_path: str, doc_type: str):
         """Méthode générique d'ingestion."""
@@ -90,7 +87,7 @@ class LegalIngestionPipeline:
         
         # 2. Métadonnées
         if doc_type == 'pdf':
-             extracted_meta = self.metadata_extractor.extract_legal_metadata(raw_text)
+             extracted_meta = self.metadata_extractor.extract_metadata_from_text(raw_text)
              metadata = DocumentMetadata(
                 document_id=f"{meta_key}_{Path(file_path).stem}_{uuid.uuid4().hex[:8]}",
                 source_file=loader_output['metadata']['source_file'],

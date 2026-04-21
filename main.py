@@ -1,8 +1,8 @@
 import argparse
 import os
 from typing import Dict
-from legal_rag.pipeline import LegalIngestionPipeline
-from legal_rag.generation import LegalAnswerGenerator
+from legal_rag.pipeline import IngestionPipeline
+from legal_rag.generation import AnswerGenerator
 from legal_rag.ragas import evaluate_rag 
 
 # Couleurs ANSI
@@ -68,13 +68,13 @@ def main():
     print(f"    Mode: {Colors.BOLD}{args.retriever.upper()}{Colors.ENDC}")
     
     # Initialisation du pipeline
-    pipeline = LegalIngestionPipeline(
+    pipeline = IngestionPipeline(
         collection_name="legal_corpus",
         retriever_type=args.retriever
     )
     
     # Initialisation du générateur
-    generator = LegalAnswerGenerator()
+    generator = AnswerGenerator()
     
     # Ingestion
     if not os.path.exists(args.corpus):

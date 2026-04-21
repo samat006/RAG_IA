@@ -37,7 +37,7 @@ DOMAIN_PROMPTS = {
 }
 
 
-class LegalAnswerGenerator:
+class AnswerGenerator:
     """
     Générateur de réponses RAG — multi-domaine, 100% local (Ollama).
     Le comportement s'adapte automatiquement au DOMAIN configuré.
@@ -45,7 +45,7 @@ class LegalAnswerGenerator:
 
     def __init__(self):
         self.domain = DOMAIN
-        self.system_intro = DOMAIN_PROMPTS.get(DOMAIN, DOMAIN_PROMPTS["legal"])
+        self.system_intro = DOMAIN_PROMPTS.get(DOMAIN, DOMAIN_PROMPTS["tourisme"])
         print(f"  🤖 Générateur initialisé — domaine : {DOMAIN.upper()} | modèle : {GENERATION_MODEL}")
 
     def generate_answer(self, query: str, results: Dict) -> str:
