@@ -57,7 +57,7 @@ def main():
     """
     Script principal avec CLI.
     """
-    parser = argparse.ArgumentParser(description="TP Session 3 - Data Ingestion Pipeline")
+    parser = argparse.ArgumentParser(description="- Data Ingestion Pipeline")
     parser.add_argument("--retriever", choices=["recursive", "parent-child"], default="recursive", help="Type de retriever à utiliser")
     parser.add_argument("--corpus", default="./documents"
     "/test", help="Chemin vers le dossier de documents")
@@ -69,7 +69,7 @@ def main():
     
     # Initialisation du pipeline
     pipeline = LegalIngestionPipeline(
-        collection_name="legal_corpus_m2_tp",
+        collection_name="legal_corpus",
         retriever_type=args.retriever
     )
     
@@ -88,8 +88,13 @@ def main():
     print_header("🔍 TESTS DE RECHERCHE & GÉNÉRATION")
     
     queries = [
-        "Dès la saison 2024 s’ouvre une nouvelle page de l’avenir du site classé de la Restonica à la suite desdégâts causés par le passage des tempêtes Ciaran et Domingos de novembre 2023 (*) ?",
-     #   "Quel texte juridique permet à la Cour de cassation de déclarer ce pourvoi irrecevable ?",
+       # "quels sont les lieux pour faire de LE BERCEAU DU SPORT NATURE",
+        "quel sont les endroit INCONTOURNABLES a visiter ?",
+
+   #"Des six citadelles corses, elle est la seule construite à l’intérieur des terres."    
+    #"Il est né de la volonté de la Collectivité Territoriale de Corse de doter l’île d’un équipement culturel de haut niveau. "
+
+  #"Quel texte juridique permet à la Cour de cassation de déclarer ce pourvoi irrecevable ?",
       #  "pourvoi formé par M. X"
       #  "Quel article dit nul ne peut se pourvoir en cassation contre une décision à laquelle il n’a pas été partie ?"
     ]
@@ -100,7 +105,7 @@ def main():
         print_section(f"Test: '{q}'")
         
         # 1. Retrieval
-        results = pipeline.search(query=q, n_results=3)
+        results = pipeline.search(query=q, n_results=10 )
         display_results(results)
         
         # 2. Generation
@@ -108,7 +113,7 @@ def main():
         print(f"\n{Colors.BOLD}🤖 RÉPONSE GÉNÉRÉE :{Colors.ENDC}")
         print(f"{Colors.GREEN}{answer}{Colors.ENDC}")
         print("-" * 20)
-        evaluate_rag(q,answer,context)
+       # evaluate_rag(q,answer,context)
     print_header("✅ TP TERMINÉ")
 
 

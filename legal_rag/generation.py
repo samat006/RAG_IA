@@ -29,6 +29,11 @@ DOMAIN_PROMPTS = {
         "Ta mission est de répondre à la question en te basant UNIQUEMENT sur les documents fournis.\n"
         "Cite tes sources précisément."
     ),
+    "tourisme": (
+        "Tu es un assistant spécialisé en documentation touristique.\n"
+        "Ta mission est de répondre à la question en te basant UNIQUEMENT sur les documents fournis.\n"
+        "Cite tes sources précisément."
+    )
 }
 
 

@@ -70,8 +70,25 @@ EXTRACTION_PROMPTS = {
 }""",
         "rules": "- Les dates DOIVENT être en format ISO: YYYY-MM-DD"
     },
+    "tourisme": {
+        "context": "expert en analyse de documents touristiques",
+        "fields": """{
+  "type_document": "presentation|historique|attractions|acces|contact",
+  "reference_complete": "nom de la destination ou du site touristique",
+  "presentation": "description courte du site",
+  "historique": "résumé historique du site",
+  "attractions": "principales attractions ou points d'intérêt",
+  "acces": "informations sur l'accès au site",
+  "contact": "informations de contact ou pratiques" 
 }
-
+    }""",
+        "rules": (
+            "- Le champ 'reference_complete' doit être le nom de la destination ou du site touristique\n"
+            "- La présentation doit être une description courte (max 200 caractères)\n"
+            "- Les champs 'historique', 'attractions', 'acces', 'contact' doivent être des résumés factuels basés sur le document"
+        )     
+        }
+    }
 
 class LLMMetadataExtractor:
     """

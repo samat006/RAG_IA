@@ -108,14 +108,31 @@ class ParentDocumentRetriever:
         
         # 1. Recherche vectorielle sur les enfants
         query_embedding = self.indexer.generate_embeddings([query])[0]
-        
+
         child_results = self.children_collection.query(
             query_embeddings=[query_embedding],
             n_results=n_results
         )
-        
+
         if not child_results['ids'][0]:
             return {"ids": [[]], "documents": [[]], "metadatas": [[]], "distances": [[]]}
+
+        # Filtre par seuil de distance (1.2 = tolérance max, plus bas = plus strict)
+        MAX_DISTANCE = 1.2
+        ids, docs, metas, dists = [], [], [], []
+        for i, dist in enumerate(child_results['distances'][0]):
+            if dist <= MAX_DISTANCE:
+                ids.append(child_results['ids'][0][i])
+                docs.append(child_results['documents'][0][i])
+                metas.append(child_results['metadatas'][0][i])
+                dists.append(dist)
+
+        if not ids:
+            print(f"  ⚠️ Aucun résultat sous le seuil de distance {MAX_DISTANCE}")
+            return {"ids": [[]], "documents": [[]], "metadatas": [[]], "distances": [[]]}
+
+        child_results = {"ids": [ids], "documents": [docs], "metadatas": [metas], "distances": [dists]}
+        print(f"  ✅ {len(ids)}/{len(child_results['distances'][0]) if False else n_results} résultats retenus (distance ≤ {MAX_DISTANCE})")
 
         # 2. Récupération des IDs parents uniques
         parent_ids_to_fetch = []
@@ -167,3 +184,4 @@ class ParentDocumentRetriever:
             'metadatas': [final_metadatas],
             'distances': [child_results['distances'][0][:len(final_ids)]] # Approx
         }
+

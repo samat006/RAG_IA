@@ -38,6 +38,14 @@ class DocumentMetadata:
     parties: Optional[List[str]] = field(default_factory=list)
     president: Optional[str] = None
 
+
+    # ── Champs tourisme ────────────────────────────────────────
+    presentation: Optional[str] = None
+    historique: Optional[str] = None
+    attractions: Optional[str] = None
+    acces: Optional[str] = None
+    contact: Optional[str] = None   
+    
     # ── Ingestion ───────────────────────────────────────────────
     date_ingestion: str = field(default_factory=lambda: datetime.now().isoformat())
 
