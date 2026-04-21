@@ -43,18 +43,21 @@ def get_document_by_source(collection_name: str, source_file: str, max_chunks: i
     print(SEPARATOR)
 
     col = chroma_client.get_collection(collection_name)
-    results = col.get(
-        where={"source_file": {"$contains": source_file}},
-        limit=max_chunks,
-        include=["documents", "metadatas"]
-    )
+    # ChromaDB .get() ne supporte pas $contains — on filtre en Python
+    all_results = col.get(include=["documents", "metadatas"])
 
-    if not results["ids"]:
+    matched = [
+        (id_, doc, meta)
+        for id_, doc, meta in zip(all_results["ids"], all_results["documents"], all_results["metadatas"])
+        if source_file.lower() in meta.get("source_file", "").lower()
+    ][:max_chunks]
+
+    if not matched:
         print(f"  ⚠️  Aucun chunk trouvé pour source_file contenant '{source_file}'")
         return
 
-    print(f"  {len(results['ids'])} chunk(s) trouvé(s) (affichage limité à {max_chunks})\n")
-    for i, (doc_id, doc, meta) in enumerate(zip(results["ids"], results["documents"], results["metadatas"])):
+    print(f"  {len(matched)} chunk(s) trouvé(s) (affichage limité à {max_chunks})\n")
+    for i, (doc_id, doc, meta) in enumerate(matched):
         print(f"  --- Chunk {i+1} | ID: {doc_id} ---")
         print(f"  Métadonnées : {meta}")
         print(f"  Contenu     :\n{doc[:500]}{'...' if len(doc) > 500 else ''}")
@@ -146,13 +149,11 @@ if __name__ == "__main__":
 
     # 4. Extraire un document précis par nom de fichier source
     #    Modifie 'mon_fichier' par une partie du nom de ton fichier
-    get_document_by_source(TARGET_COLLECTION, source_file="mon_fichier", max_chunks=3)
+    get_document_by_source(TARGET_COLLECTION, source_file="Guide 2026", max_chunks=3)
 
     # 5. Requêtes de similarité — modifie les questions selon ton domaine
     questions = [
-        "Quelles sont les obligations du prestataire ?",
-        "Conditions de résiliation du contrat",
-        "Responsabilité en cas de dommage",
+        "quel androit a visiter sur cores?",
     ]
 
     for q in questions:

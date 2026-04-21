@@ -88,7 +88,7 @@ def main():
     print_header("🔍 TESTS DE RECHERCHE & GÉNÉRATION")
     
     queries = [
-        "Dès la saison 2024 s’ouvre une nouvelle page de l’avenir du site classé de la Restonica à la suite desdégâts causés par le passage des tempêtes Ciaran et Domingos de novembre 2023 (*) ?",
+        "quel androit a visiter sur cores?",
      #   "Quel texte juridique permet à la Cour de cassation de déclarer ce pourvoi irrecevable ?",
       #  "pourvoi formé par M. X"
       #  "Quel article dit nul ne peut se pourvoir en cassation contre une décision à laquelle il n’a pas été partie ?"
@@ -108,7 +108,7 @@ def main():
         print(f"\n{Colors.BOLD}🤖 RÉPONSE GÉNÉRÉE :{Colors.ENDC}")
         print(f"{Colors.GREEN}{answer}{Colors.ENDC}")
         print("-" * 20)
-        evaluate_rag(q,answer,context)
+      #  evaluate_rag(q,answer,context)
     print_header("✅ TP TERMINÉ")
 
 
