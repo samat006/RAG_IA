@@ -91,7 +91,7 @@ def main():
        # "quels sont les lieux pour faire de LE BERCEAU DU SPORT NATURE",
         "quel sont les endroit INCONTOURNABLES a visiter ?",
 
-   #"Des six citadelles corses, elle est la seule construite à l’intérieur des terres."    
+   #"Des six citadelles corses, elle est la seule construite à l’intérieur des terres."
     #"Il est né de la volonté de la Collectivité Territoriale de Corse de doter l’île d’un équipement culturel de haut niveau. "
 
   #"Quel texte juridique permet à la Cour de cassation de déclarer ce pourvoi irrecevable ?",
