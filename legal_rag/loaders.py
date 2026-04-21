@@ -1,19 +1,25 @@
 import os
+import re
 import json
 import xml.etree.ElementTree as ET
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, List
+from collections import Counter
 from datetime import datetime
 import fitz  # PyMuPDF
 
+
 class PDFLoader:
     """
-    Loader PDF pour documents.
-    
-    Utilise PyMuPDF (fitz) pour:
-    - Extraction de texte robuste (compatible vieux PDF)
-    - Détection géométrique des headers/footers
+    Loader PDF adaptatif — fonctionne sur tout type de document :
+    juridique, touristique, technique, magazine, rapport, etc.
+
+    Stratégie :
+    1. Détection automatique du type de mise en page (mono/multi-colonnes)
+    2. Détection statistique des headers/footers répétitifs (pas de seuil fixe)
+    3. Reconstruction du flux de lecture dans l'ordre naturel
+    4. Nettoyage minimal : uniquement les lignes vraiment répétées sur N pages
     """
-    
+
     def __init__(self, file_path: str):
         self.file_path = file_path
         self.metadata = {
@@ -22,93 +28,137 @@ class PDFLoader:
         }
         self.raw_text = ""
         self.pages_data = []
-    
+
     def load(self) -> Dict[str, Any]:
-        """
-        Extraction complète du PDF avec nettoyage géométrique.
-        """
-        print(f"\n📄 Chargement PDF (PyMuPDF): {self.file_path}")
-        
+        print(f"\n📄 Chargement PDF adaptatif: {self.file_path}")
+
         doc = fitz.open(self.file_path)
         self.metadata['num_pages'] = len(doc)
-        
+
+        # Passe 1 : extraire tous les blocs de toutes les pages
+        all_pages_blocks = []
         for page_num, page in enumerate(doc, start=1):
-            # Dimensions
             rect = page.rect
-            page_height = rect.height
-            
-            # Extraction des blocs de texte
-            # blocks: (x0, y0, x1, y1, text, block_no, block_type)
             blocks = page.get_text("blocks")
-            
-            cleaned_text = self._clean_headers_footers_geometric(
-                blocks, 
-                page_height
-            )
-            
-            self.pages_data.append({
+            all_pages_blocks.append({
                 'page_num': page_num,
-                'text': cleaned_text,
-                'height': page_height,
-                'width': rect.width
+                'blocks': blocks,
+                'width': rect.width,
+                'height': rect.height
             })
-            
+
         doc.close()
-        
-        # Assemblage du texte complet
-        self.raw_text = "\n\n".join([p['text'] for p in self.pages_data])
-        
+
+        # Passe 2 : détecter les lignes répétitives (headers/footers réels)
+        repetitive_lines = self._detect_repetitive_lines(all_pages_blocks)
+
+        # Passe 3 : extraire le texte page par page
+        for page_data in all_pages_blocks:
+            text = self._extract_page_text(
+                page_data['blocks'],
+                page_data['width'],
+                page_data['height'],
+                repetitive_lines
+            )
+            self.pages_data.append({
+                'page_num': page_data['page_num'],
+                'text': text,
+                'height': page_data['height'],
+                'width': page_data['width']
+            })
+
+        self.raw_text = "\n\n".join([p['text'] for p in self.pages_data if p['text'].strip()])
         print(f"  ✅ {len(self.raw_text)} caractères extraits sur {self.metadata['num_pages']} pages")
-        
+
         return {
             'raw_text': self.raw_text,
             'metadata': self.metadata,
             'pages_data': self.pages_data
         }
-    
-    def _clean_headers_footers_geometric(
-        self, 
-        blocks: list, 
-        page_height: float
+
+    def _detect_repetitive_lines(self, all_pages_blocks: List[Dict]) -> set:
+        """
+        Détecte les lignes qui apparaissent sur au moins 30% des pages
+        → ce sont de vrais headers/footers, pas du contenu.
+        """
+        n_pages = len(all_pages_blocks)
+        if n_pages < 3:
+            return set()  # Pas assez de pages pour détecter
+
+        line_counter = Counter()
+        for page_data in all_pages_blocks:
+            page_lines = set()
+            for b in page_data['blocks']:
+                if b[6] == 0:  # bloc texte
+                    for line in b[4].split('\n'):
+                        clean = line.strip()
+                        if clean and len(clean) > 2:
+                            page_lines.add(clean)
+            line_counter.update(page_lines)
+
+        threshold = max(3, int(n_pages * 0.30))
+        return {line for line, count in line_counter.items() if count >= threshold}
+
+    def _detect_layout(self, blocks: list, page_width: float) -> str:
+        """
+        Détecte si la page est en mono-colonne ou multi-colonnes.
+        Retourne 'single' ou 'multi'.
+        """
+        text_blocks = [b for b in blocks if b[6] == 0 and b[4].strip()]
+        if len(text_blocks) < 4:
+            return 'single'
+
+        page_center = page_width / 2
+        left_count = sum(1 for b in text_blocks if b[2] < page_center * 0.85)
+        right_count = sum(1 for b in text_blocks if b[0] > page_center * 1.15)
+
+        if left_count > 1 and right_count > 1:
+            return 'multi'
+        return 'single'
+
+    def _extract_page_text(
+        self,
+        blocks: list,
+        page_width: float,
+        page_height: float,
+        repetitive_lines: set
     ) -> str:
         """
-        Suppression des headers/footers par analyse géométrique.
+        Extrait le texte d'une page en respectant le flux de lecture.
+        - Multi-colonnes : lecture colonne gauche puis colonne droite
+        - Mono-colonne : lecture de haut en bas
         """
-        # Zones à exclure (en points, origine en haut à gauche)
-        # On garde le contenu entre 8% et 92% de la hauteur
-        header_limit = page_height * 0.08
-        footer_limit = page_height * 0.92
-        
-        filtered_blocks = []
-        for b in blocks:
-            # b = (x0, y0, x1, y1, text, block_no, block_type)
-            if b[6] == 0: # Type 0 = texte
-                y0, y1 = b[1], b[3]
-                y_center = (y0 + y1) / 2
-                
-                # On garde seulement les blocs dans la zone "body"
-                if header_limit < y_center < footer_limit:
-                    filtered_blocks.append(b[4]) # b[4] est le texte
-        
-        # Reconstruction du texte
-        cleaned_text = '\n'.join(filtered_blocks)
-        
-        # Post-traitement : suppression des patterns résiduels
-        noise_patterns = [
-            'Doctrine',
-            'www.legifrance.gouv.fr',
-            'JURITEXT',
-            'Identifiant Légifrance'
-        ]
-        
-        for pattern in noise_patterns:
-            if pattern in cleaned_text:
-                # On supprime la ligne entière contenant ce pattern
-                lines = cleaned_text.split('\n')
-                lines = [l for l in lines if pattern not in l]
-                cleaned_text = '\n'.join(lines)
-        
-        return cleaned_text
+        text_blocks = [b for b in blocks if b[6] == 0 and b[4].strip()]
+        if not text_blocks:
+            return ""
+
+        layout = self._detect_layout(text_blocks, page_width)
+
+        if layout == 'multi':
+            page_center = page_width / 2
+            left_blocks = [b for b in text_blocks if (b[0] + b[2]) / 2 < page_center]
+            right_blocks = [b for b in text_blocks if (b[0] + b[2]) / 2 >= page_center]
+            left_blocks.sort(key=lambda b: b[1])
+            right_blocks.sort(key=lambda b: b[1])
+            ordered_blocks = left_blocks + right_blocks
+        else:
+            ordered_blocks = sorted(text_blocks, key=lambda b: (b[1], b[0]))
+
+        lines_out = []
+        for b in ordered_blocks:
+            for line in b[4].split('\n'):
+                clean = line.strip()
+                if not clean:
+                    continue
+                # Supprimer les lignes répétitives détectées automatiquement
+                if clean in repetitive_lines:
+                    continue
+                # Supprimer les numéros de page isolés (ex: "42", " 7 ")
+                if re.fullmatch(r'\d{1,4}', clean):
+                    continue
+                lines_out.append(clean)
+
+        return '\n'.join(lines_out)
 
 
 class XMLLoader:
