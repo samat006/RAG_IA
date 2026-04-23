@@ -5,11 +5,10 @@ from typing import Optional, Dict
 
 from .models import DocumentMetadata
 from .loaders import PDFLoader, XMLLoader, JSONLoader
-from .extractors import LLMMetadataExtractor
 from .chunkers import StructuralChunker
 from .indexing import CorpusIndexer
 from .retrieval import ParentDocumentRetriever
-from .config import DOMAIN
+from .config import DOMAIN, chroma_client
 
 def sliding_window_splitter(text, chunk_size, overlap):
     """
@@ -46,17 +45,15 @@ class IngestionPipeline:
     Pipeline complet d'ingestion pour tout type de corpus.
     """
 
-    def __init__(self, collection_name: str = "corpus_tp", retriever_type: str = "recursive"):
+    def __init__(self, collection_name: str = "legal_corpus_m2_tp", retriever_type: str = "recursive"):
         self.retriever_type = retriever_type
         self.collection_name = collection_name
 
         self.chunker = StructuralChunker(
-            max_chunk_size=800,
-            min_chunk_size=100,
-            overlap=100
+            max_chunk_size=1500,  # ✅ FIXED: 800 → 1500 (consistent with default)
+            min_chunk_size=300,   # ✅ FIXED: 100 → 300
+            overlap=400           # ✅ FIXED: 100 → 400
         )
-
-        self.metadata_extractor = LLMMetadataExtractor()
 
         if self.retriever_type == "parent-child":
             self.parent_retriever = ParentDocumentRetriever(
@@ -87,13 +84,11 @@ class IngestionPipeline:
         
         # 2. Métadonnées
         if doc_type == 'pdf':
-             extracted_meta = self.metadata_extractor.extract_metadata_from_text(raw_text)
-             metadata = DocumentMetadata(
+            metadata = DocumentMetadata(
                 document_id=f"{meta_key}_{Path(file_path).stem}_{uuid.uuid4().hex[:8]}",
                 source_file=loader_output['metadata']['source_file'],
                 source_type=meta_key,
                 domain=DOMAIN,
-                **extracted_meta
             )
         elif doc_type == 'xml':
              metadata = DocumentMetadata(
@@ -119,10 +114,10 @@ class IngestionPipeline:
 
         # 3. Chunking & Indexation selon stratégie
         if self.retriever_type == "parent-child":
-            # Paramètres OPTIMISÉS
-            PARENT_SIZE = 2000
-            CHILD_SIZE = 400
-            CHILD_OVERLAP = 100
+            # Paramètres OPTIMISÉS — match avec chunking principal
+            PARENT_SIZE = 2500    # ✅ FIXED: 2000 → 2500 (larger context windows)
+            CHILD_SIZE = 800      # ✅ FIXED: 400 → 800 (denser search units)
+            CHILD_OVERLAP = 200   # ✅ FIXED: 100 → 200 (better phrase preservation)
 
             parent_chunks = []
             child_chunks = []
@@ -161,17 +156,58 @@ class IngestionPipeline:
         else:
             # Recursive standard
             chunks = self.chunker.chunk_document(raw_text, metadata)
-            self.indexer.index_document(chunks, enrich=True)
+            self.indexer.index_document(chunks, enrich=False)
 
-    def ingest_corpus(self, corpus_dir: str):
-        """Ingestion récursive."""
+    def _collection_has_docs(self) -> bool:
+        """Vérifie si la collection principale contient déjà des documents."""
+        try:
+            if self.retriever_type == "parent-child":
+                count = self.parent_retriever.children_collection.count()
+            else:
+                count = self.indexer.collection.count()
+            return count > 0
+        except Exception:
+            return False
+
+    def ingest_corpus(self, corpus_dir: str, force: bool = False):
+        """Ingestion récursive. Ignorée si la collection est déjà peuplée (sauf force=True)."""
         corpus_path = Path(corpus_dir)
         if not corpus_path.exists():
             print(f"❌ Répertoire introuvable: {corpus_dir}")
             return
-            
+
+        if force and self._collection_has_docs():
+            print(f"\n🗑️  Reset demandé — suppression des collections existantes...")
+            for name in [
+                self.collection_name,
+                f"{self.collection_name}_children",
+                f"{self.collection_name}_parents",
+            ]:
+                try:
+                    chroma_client.delete_collection(name)
+                    print(f"   ✓ {name} supprimée")
+                except Exception:
+                    pass
+            # Recréer les indexers/retrievers après suppression
+            if self.retriever_type == "parent-child":
+                self.parent_retriever = ParentDocumentRetriever(
+                    collection_name_children=f"{self.collection_name}_children",
+                    collection_name_parents=f"{self.collection_name}_parents",
+                )
+            else:
+                self.indexer = CorpusIndexer(collection_name=self.collection_name)
+
+        elif not force and self._collection_has_docs():
+            if self.retriever_type == "parent-child":
+                count = self.parent_retriever.children_collection.count()
+            else:
+                count = self.indexer.collection.count()
+            print(f"\n✅ Collection '{self.collection_name}' déjà peuplée ({count} chunks) — ingestion ignorée.")
+            print(f"   (Relancez avec --reset pour forcer la ré-indexation)")
+            return
+
         print(f"\n🗂️  INGESTION DU CORPUS ({self.retriever_type.upper()}): {corpus_dir}")
-        
+
         files = list(corpus_path.glob("**/*.*"))
         for f in files:
             try:

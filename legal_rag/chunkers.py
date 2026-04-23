@@ -3,204 +3,153 @@ import re
 from .models import DocumentMetadata
 from .config import DOMAIN
 
-# ── Patterns de sections par domaine ────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────
+# Patterns (optionnels, utilisés seulement comme signaux)
+# ─────────────────────────────────────────────────────────────
 DOMAIN_PATTERNS = {
     "legal": {
-        'procedure':       r'(?:Sur le pourvoi|Vu le pourvoi)',
-        'recevabilite':    r'Sur la recevabilité',
-        'motifs':          r'(?:Sur le fond|Attendu que|Considérant que)',
-        'dispositif':      r'PAR CES MOTIFS',
-        'formule_finale':  r'Ainsi (?:fait|jugé)',
-    },
-    "municipal": {
-        'objet':           r'(?:OBJET\s*:|Objet\s*:)',
-        'vu':              r'\bVU\b(?:\s+le|\s+la|\s+l\'|\s+les|\s+que)',
-        'considerant':     r'\bCONSIDÉRANT\b|\bConsidérant\b',
-        'decide':          r'(?:DÉCIDE\b|LE CONSEIL MUNICIPAL\b|Le Conseil Municipal\b)',
-        'article':         r'(?:ARTICLE\s+\d+|Article\s+\d+)\s*[-–:]',
-        'arrete':          r'(?:ARRÊTE\s*:|LE MAIRE\s*,|Le Maire\s*,)',
-        'deliberation':    r'(?:DÉLIBÉRATION|Délibération)\s+n°',
-        'vote':            r'(?:Résultat du vote|Vote\s*:)',
-    },
-    "medical": {
-        'patient':         r'(?:Patient\s*:|Nom\s*:)',
-        'diagnostic':      r'(?:Diagnostic\s*:|Conclusion\s*:)',
-        'traitement':      r'(?:Traitement\s*:|Prescription\s*:)',
-        'antecedents':     r'(?:Antécédents\s*:|ATCD\s*:)',
-        'examen':          r'(?:Examen clinique|Résultats\s*:)',
-    },
-    "rh": {
-        'poste':           r'(?:Intitulé du poste|Poste\s*:)',
-        'missions':        r'(?:Missions\s*:|Responsabilités\s*:)',
-        'profil':          r'(?:Profil recherché|Compétences\s*:)',
-        'conditions':      r'(?:Conditions\s*:|Rémunération\s*:)',
-    },
-    "technique": {
-        'objectif':        r'(?:Objectif\s*:|But\s*:)',
-        'description':     r'(?:Description\s*:|Présentation\s*:)',
-        'specification':   r'(?:Spécification|Cahier des charges)',
-        'conclusion':      r'(?:Conclusion\s*:|Résumé\s*:)',
+        'procedure': r'(?:Sur le pourvoi|Vu le pourvoi)',
+        'recevabilite': r'Sur la recevabilité',
+        'motifs': r'(?:Considérant que|Attendu que)',
+        'dispositif': r'PAR CES MOTIFS',
     },
     "tourisme": {
-        'presentation':    r'(?:Présentation\s*:|Description\s*:|Zoom sur)',
-        'historique':      r'(?:Historique\s*:|Histoire\s*:|patrimoine)',
-        'attractions':     r'(?:Les\s+incontournables|Points\s+d\'intérêt\s*:|À\s+voir\s*:)',
-        'activites':       r'(?:Activités\s*:|Sports\s*:|Loisirs\s*:|Randonnée)',
-        'acces':           r'(?:Accès\s*:|Comment\s+venir\s*:|Horaires\s*:)',
-        'hebergement':     r'(?:Hébergements?\s*:|Hôtels?\s*:|Restaurants?\s*:)',
+        'hotel': r'(HÔTEL|HOTEL|AUBERGE|RÉSIDENCE|MÔTEL)',
     }
 }
 
 
+# ─────────────────────────────────────────────────────────────
+# CHUNKER GÉNÉRALISTE ROBUSTE
+# ─────────────────────────────────────────────────────────────
 class StructuralChunker:
-    """
-    Chunker structurel multi-domaine.
-
-    Stratégie :
-    1. Détection des sections par patterns du domaine configuré
-    2. Chunking par section (si taille OK)
-    3. Fallback récursif si section trop longue
-    """
 
     def __init__(
         self,
-        max_chunk_size: int = 800,
-        min_chunk_size: int = 100,
-        overlap: int = 100,
+        max_chunk_size: int = 1500,  # ✅ FIXED: 800 → 1500 (+87%) — keep semantic units together
+        min_chunk_size: int = 300,   # ✅ FIXED: 200 → 300 (+50%) — avoid tiny fragments
+        overlap: int = 400,          # ✅ FIXED: 120 → 400 (+233%) — preserve context at boundaries
         domain: str = None
     ):
         self.max_chunk_size = max_chunk_size
         self.min_chunk_size = min_chunk_size
         self.overlap = overlap
 
-        # Domaine : paramètre explicite > config globale > fallback legal
         active_domain = domain or DOMAIN
-        self.section_patterns = DOMAIN_PATTERNS.get(active_domain, DOMAIN_PATTERNS["tourisme"])
-        print(f"  🗂️  Chunker initialisé — domaine : {active_domain.upper()}")
+        self.section_patterns = DOMAIN_PATTERNS.get(active_domain, {})
 
-    def chunk_document(
-        self,
-        text: str,
-        metadata: DocumentMetadata
-    ) -> List[Dict[str, Any]]:
-        """
-        Chunking adaptatif d'un document.
+        print(f"🗂️ Chunker initialisé — domaine: {active_domain}")
 
-        Returns:
-            Liste de dicts {text, metadata, chunk_type, chunk_index}
-        """
-        print(f"  ✂️  Chunking: {len(text)} chars...")
+    # ─────────────────────────────────────────────────────────
+    # ENTRY POINT
+    # ─────────────────────────────────────────────────────────
+    def chunk_document(self, text: str, metadata: DocumentMetadata) -> List[Dict]:
 
-        if len(text) < self.max_chunk_size * 2:
-            print(f"    → Document court: chunk unique")
+        print(f"✂️ Chunking document: {len(text)} chars")
+
+        # petit doc → un seul chunk
+        if len(text) < self.max_chunk_size:
             return [{
-                'text': text,
-                'metadata': metadata,
-                'chunk_type': 'full_document',
-                'chunk_index': 0
+                "text": text,
+                "metadata": metadata,
+                "chunk_type": "full_document",
+                "chunk_index": 0
             }]
 
-        sections = self._detect_sections(text)
+        # 1. split en blocs naturels
+        blocks = self._split_into_blocks(text)
 
-        if sections:
-            print(f"    → {len(sections)} sections détectées")
-            return self._chunk_by_sections(sections, text, metadata)
+        # 2. fusion intelligente
+        chunks = self._merge_blocks(blocks)
 
-        print(f"    → Fallback: chunking récursif")
-        return self._recursive_chunk(text, metadata)
-
-    def _detect_sections(self, text: str) -> List[Dict]:
-        sections = []
-        for section_type, pattern in self.section_patterns.items():
-            for match in re.finditer(pattern, text, re.IGNORECASE):
-                sections.append({
-                    'type': section_type,
-                    'start': match.start(),
-                    'marker': match.group(0)
-                })
-        sections.sort(key=lambda x: x['start'])
-        for i, section in enumerate(sections):
-            if i < len(sections) - 1:
-                section['end'] = sections[i + 1]['start']
-            else:
-                section['end'] = len(text)
-        return sections if len(sections) >= 2 else []
-
-    def _chunk_by_sections(
-        self,
-        sections: List[Dict],
-        text: str,
-        metadata: DocumentMetadata
-    ) -> List[Dict]:
-        chunks = []
-        for idx, section in enumerate(sections):
-            section_text = text[section['start']:section['end']].strip()
-            if len(section_text) > self.max_chunk_size:
-                sub_chunks = self._recursive_chunk_text(section_text)
-                for sub_idx, sub_chunk in enumerate(sub_chunks):
-                    chunks.append({
-                        'text': sub_chunk,
-                        'metadata': metadata,
-                        'chunk_type': section['type'],
-                        'chunk_index': f"{idx}.{sub_idx}",
-                        'section_marker': section['marker']
-                    })
-            else:
-                chunks.append({
-                    'text': section_text,
-                    'metadata': metadata,
-                    'chunk_type': section['type'],
-                    'chunk_index': idx,
-                    'section_marker': section['marker']
-                })
-        return chunks
-
-    def _recursive_chunk(
-        self,
-        text: str,
-        metadata: DocumentMetadata
-    ) -> List[Dict]:
-        chunks_text = self._recursive_chunk_text(text)
+        # 3. format final
         return [
             {
-                'text': chunk,
-                'metadata': metadata,
-                'chunk_type': 'recursive',
-                'chunk_index': idx
+                "text": chunk,
+                "metadata": metadata,
+                "chunk_type": "general",
+                "chunk_index": i
             }
-            for idx, chunk in enumerate(chunks_text)
+            for i, chunk in enumerate(chunks)
         ]
 
-    def _recursive_chunk_text(self, text: str) -> List[str]:
-        separators = ['\n\n', '\n', '. ', '; ', ', ']
-        return self._split_recursive(text, separators)
+    # ─────────────────────────────────────────────────────────
+    # 1. SPLIT PAR STRUCTURE NATURELLE
+    # ─────────────────────────────────────────────────────────
+    def _split_into_blocks(self, text: str) -> List[str]:
 
-    def _split_recursive(self, text: str, seps: List[str]) -> List[str]:
-        if not seps or len(text) <= self.max_chunk_size:
-            return [text] if text.strip() else []
-        sep = seps[0]
-        splits = text.split(sep)
+        # priorité : paragraphes
+        blocks = re.split(r'\n\s*\n', text)
+
+        cleaned = []
+        for b in blocks:
+            b = b.strip()
+            if len(b) > 0:
+                cleaned.append(b)
+
+        return cleaned
+
+    # ─────────────────────────────────────────────────────────
+    # 2. MERGE INTELLIGENT DES BLOCS
+    # ─────────────────────────────────────────────────────────
+    def _merge_blocks(self, blocks: List[str]) -> List[str]:
+
         chunks = []
-        current = []
-        current_len = 0
-        for split in splits:
-            split_len = len(split) + len(sep)
-            if split_len > self.max_chunk_size:
-                if current:
-                    chunks.append(sep.join(current))
-                    current = []
-                    current_len = 0
-                sub_chunks = self._split_recursive(split, seps[1:])
-                chunks.extend(sub_chunks)
+        current = ""
+
+        for block in blocks:
+
+            # si trop grand → split direct
+            if len(block) > self.max_chunk_size:
+                chunks.extend(self._split_large_block(block))
                 continue
-            if current_len + split_len > self.max_chunk_size and current:
-                chunks.append(sep.join(current))
-                overlap_text = sep.join(current)[-self.overlap:]
-                current = [overlap_text, split]
-                current_len = len(overlap_text) + split_len
+
+            # fusion normale
+            if len(current) + len(block) <= self.max_chunk_size:
+                current += "\n" + block
             else:
-                current.append(split)
-                current_len += split_len
-        if current:
-            chunks.append(sep.join(current))
-        return [c.strip() for c in chunks if c.strip()]
+                chunks.append(current.strip())
+
+                # overlap intelligent (phrases)
+                current = self._create_overlap(current) + "\n" + block
+
+        if current.strip():
+            chunks.append(current.strip())
+
+        return chunks
+
+    # ─────────────────────────────────────────────────────────
+    # 3. SPLIT GROS BLOC
+    # ─────────────────────────────────────────────────────────
+    def _split_large_block(self, text: str) -> List[str]:
+
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+
+        chunks = []
+        current = ""
+
+        for s in sentences:
+
+            if len(current) + len(s) <= self.max_chunk_size:
+                current += " " + s
+            else:
+                chunks.append(current.strip())
+                current = self._create_overlap(current) + " " + s
+
+        if current.strip():
+            chunks.append(current.strip())
+
+        return chunks
+
+    # ─────────────────────────────────────────────────────────
+    # 4. OVERLAP PROPRE (PHRASES)
+    # ─────────────────────────────────────────────────────────
+    def _create_overlap(self, text: str) -> str:
+
+        sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+
+        if len(sentences) <= 2:
+            return text[-self.overlap:]
+
+        return " ".join(sentences[-2:])

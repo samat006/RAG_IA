@@ -59,38 +59,41 @@ def main():
     """
     parser = argparse.ArgumentParser(description="- Data Ingestion Pipeline")
     parser.add_argument("--retriever", choices=["recursive", "parent-child"], default="recursive", help="Type de retriever à utiliser")
-    parser.add_argument("--corpus", default="./documents"
-    "/test", help="Chemin vers le dossier de documents")
-    
+    parser.add_argument("--corpus", default="./documents/test", help="Chemin vers le dossier de documents")
+    parser.add_argument("--reset", action="store_true", help="Vider et ré-indexer la collection depuis zéro")
+
     args = parser.parse_args()
-    
+
     print_header("🏛️ DATA INGESTION PIPELINE")
     print(f"    Mode: {Colors.BOLD}{args.retriever.upper()}{Colors.ENDC}")
-    
+
     # Initialisation du pipeline
     pipeline = IngestionPipeline(
-        collection_name="legal_corpus",
+        collection_name="legal_corpus_m2_tp",
         retriever_type=args.retriever
     )
-    
+
     # Initialisation du générateur
     generator = AnswerGenerator()
-    
+
     # Ingestion
     if not os.path.exists(args.corpus):
         print(f"{Colors.FAIL}❌ Créez le répertoire '{args.corpus}' et placez-y vos documents{Colors.ENDC}")
         return
-    
+
     print_section(f"INGESTION DU CORPUS ({args.retriever.upper()})")
-    pipeline.ingest_corpus(args.corpus)
+    pipeline.ingest_corpus(args.corpus, force=args.reset)
     
     # TESTS DE RECHERCHE
     print_header("🔍 TESTS DE RECHERCHE & GÉNÉRATION")
     
     queries = [
+        "qui a creer le pont du Vechju ?",
+        "parle moi de LE VENACAIS",
+      "quel est le tarif d'une chambre double a l'hotel arena ?",
        # "quels sont les lieux pour faire de LE BERCEAU DU SPORT NATURE",
-        "quel sont les endroit INCONTOURNABLES a visiter ?",
-
+      #  "quel sont les endroit INCONTOURNABLES a visiter ?",
+    # "le coffee cortenais ?"
    #"Des six citadelles corses, elle est la seule construite à l’intérieur des terres."
     #"Il est né de la volonté de la Collectivité Territoriale de Corse de doter l’île d’un équipement culturel de haut niveau. "
 
@@ -105,7 +108,7 @@ def main():
         print_section(f"Test: '{q}'")
         
         # 1. Retrieval
-        results = pipeline.search(query=q, n_results=10 )
+        results = pipeline.search(query=q, n_results=5 )
         display_results(results)
         
         # 2. Generation

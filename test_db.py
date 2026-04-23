@@ -153,8 +153,37 @@ if __name__ == "__main__":
 
     # 5. Requêtes de similarité — modifie les questions selon ton domaine
     questions = [
-        "quel androit a visiter sur cores?",
+        "quel est le tarif d'une chambre d'hotel arena ?",
+
+       # "quel androit a visiter sur cores?",
+        "le coffee cortenais ?"
     ]
 
     for q in questions:
-        search_collection(TARGET_COLLECTION, query=q, n_results=5, max_distance=1.2)
+        search_collection(TARGET_COLLECTION, query=q, n_results=15, max_distance=1.2)
+
+def show_all_chunks(collection_name: str, limit: int = 20):
+    from legal_rag.config import chroma_client
+
+    col = chroma_client.get_collection(collection_name)
+    data = col.get(include=["documents", "metadatas"])
+    ids = col.get()["ids"]
+
+    print("\n" + "="*80)
+    print(f"📦 CHUNKS DANS : {collection_name}")
+    print("="*80)
+
+    for i, (doc_id, doc, meta) in enumerate(zip(ids, data["documents"], data["metadatas"])):
+
+        if i >= limit:
+            print("\n... LIMIT ATTEINTE ...")
+            break
+
+        print("\n" + "-"*60)
+        print(f"CHUNK {i}")
+        print(f"ID      : {doc_id}")
+        print(f"SOURCE  : {meta.get('source_file', 'N/A')}")
+        print(f"TYPE    : {meta.get('chunk_type', 'N/A')}")
+        print(f"TEXT    :\n{doc}")
+
+show_all_chunks("legal_corpus_m2_tp", limit=30)

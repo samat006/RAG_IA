@@ -183,12 +183,11 @@ class CorpusIndexer:
         # Embedding de la requête
         query_embedding = self.generate_embeddings([query])[0]
         
-        # Recherche ChromaDB
-        results = self.collection.query(
-            query_embeddings=[query_embedding],
-            n_results=n_results,
-            where=filters
-        )
+        # Recherche ChromaDB (ne pas passer where=None — bug ChromaDB sur certaines versions)
+        query_kwargs: Dict = {"query_embeddings": [query_embedding], "n_results": n_results}
+        if filters:
+            query_kwargs["where"] = filters
+        results = self.collection.query(**query_kwargs)
         
         print(f"   ✅ {len(results['ids'][0])} résultats")
         
