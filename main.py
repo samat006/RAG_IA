@@ -88,6 +88,9 @@ def main():
     print_header("🔍 TESTS DE RECHERCHE & GÉNÉRATION")
     
     queries = [
+        "quels sont les 5 activités que doivent répondre de R-D ?",
+        "de quoi parle le chapitre 4 ?",
+        "quels sont les Principaux objectifs de la quatrième édition",
         "qui a creer le pont du Vechju ?",
         "parle moi de LE VENACAIS",
       "quel est le tarif d'une chambre double a l'hotel arena ?",
