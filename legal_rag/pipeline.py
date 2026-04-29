@@ -5,10 +5,10 @@ from typing import Optional, Dict
 
 from .models import DocumentMetadata
 from .loaders import PDFLoader, XMLLoader, JSONLoader
-from .chunkers import StructuralChunker
+from .chunkers import StructuralChunker, MarkdownChunker
 from .indexing import CorpusIndexer
 from .retrieval import ParentDocumentRetriever
-from .config import DOMAIN, chroma_client
+from .config import DOMAIN, chroma_client, USE_OCR, PDF_MODE
 
 def sliding_window_splitter(text, chunk_size, overlap):
     """
@@ -49,11 +49,11 @@ class IngestionPipeline:
         self.retriever_type = retriever_type
         self.collection_name = collection_name
 
-        self.chunker = StructuralChunker(
-            max_chunk_size=1500,  # ✅ FIXED: 800 → 1500 (consistent with default)
-            min_chunk_size=300,   # ✅ FIXED: 100 → 300
-            overlap=400           # ✅ FIXED: 100 → 400
-        )
+        # Modes qui produisent du Markdown structuré → MarkdownChunker (découpe sur ##)
+        if PDF_MODE in ("docling", "markdown"):
+            self.chunker = MarkdownChunker(max_chunk_size=2000, min_chunk_size=100, overlap=0)
+        else:
+            self.chunker = StructuralChunker(max_chunk_size=1500, min_chunk_size=300, overlap=400)
 
         if self.retriever_type == "parent-child":
             self.parent_retriever = ParentDocumentRetriever(
@@ -63,12 +63,12 @@ class IngestionPipeline:
         else:
             self.indexer = CorpusIndexer(collection_name=collection_name)
 
-    def ingest_document(self, file_path: str, doc_type: str):
+    def ingest_document(self, file_path: str, doc_type: str, dump_text: bool = False):
         """Méthode générique d'ingestion."""
         
         # 1. Loading (Factory pattern simplifié)
         if doc_type == 'pdf':
-            loader = PDFLoader(file_path)
+            loader = PDFLoader(file_path, use_ocr=USE_OCR, pdf_mode=PDF_MODE)
             meta_key = 'pdf'
         elif doc_type == 'xml':
             loader = XMLLoader(file_path)
@@ -81,6 +81,11 @@ class IngestionPipeline:
             
         loader_output = loader.load()
         raw_text = loader_output['raw_text']
+
+        if dump_text and raw_text:
+            dump_path = Path(file_path).with_suffix('.extracted.txt')
+            dump_path.write_text(raw_text, encoding='utf-8')
+            print(f"  💾 Texte sauvegardé : {dump_path}")
         
         # 2. Métadonnées
         if doc_type == 'pdf':
@@ -169,7 +174,7 @@ class IngestionPipeline:
         except Exception:
             return False
 
-    def ingest_corpus(self, corpus_dir: str, force: bool = False):
+    def ingest_corpus(self, corpus_dir: str, force: bool = False, dump_text: bool = False):
         """Ingestion récursive. Ignorée si la collection est déjà peuplée (sauf force=True)."""
         corpus_path = Path(corpus_dir)
         if not corpus_path.exists():
@@ -212,11 +217,11 @@ class IngestionPipeline:
         for f in files:
             try:
                 if f.suffix == '.pdf':
-                    self.ingest_document(str(f), 'pdf')
+                    self.ingest_document(str(f), 'pdf', dump_text=dump_text)
                 elif f.suffix == '.xml':
-                    self.ingest_document(str(f), 'xml')
+                    self.ingest_document(str(f), 'xml', dump_text=dump_text)
                 elif f.suffix == '.json':
-                    self.ingest_document(str(f), 'json')
+                    self.ingest_document(str(f), 'json', dump_text=dump_text)
             except Exception as e:
                 print(f"❌ Erreur sur {f.name}: {e}")
 

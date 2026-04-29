@@ -61,6 +61,7 @@ def main():
     parser.add_argument("--retriever", choices=["recursive", "parent-child"], default="recursive", help="Type de retriever à utiliser")
     parser.add_argument("--corpus", default="./documents/test", help="Chemin vers le dossier de documents")
     parser.add_argument("--reset", action="store_true", help="Vider et ré-indexer la collection depuis zéro")
+    parser.add_argument("--dump", action="store_true", help="Sauvegarder le texte extrait dans un .extracted.txt par document")
 
     args = parser.parse_args()
 
@@ -82,18 +83,24 @@ def main():
         return
 
     print_section(f"INGESTION DU CORPUS ({args.retriever.upper()})")
-    pipeline.ingest_corpus(args.corpus, force=args.reset)
+    pipeline.ingest_corpus(args.corpus, force=args.reset, dump_text=args.dump)
     
     # TESTS DE RECHERCHE
     print_header("🔍 TESTS DE RECHERCHE & GÉNÉRATION")
     
     queries = [
-        "quels sont les 5 activités que doivent répondre de R-D ?",
-        "de quoi parle le chapitre 4 ?",
-        "quels sont les Principaux objectifs de la quatrième édition",
+        "y'a il GESTES ET SAVOIR-FAIRES sur CORSES ?",
+        "Quel est le tarif d'une chambre double à l'hôtel SAMPIERO CORSO ?",
+        " Le tarif d'une chambre double HÔTEL SAN GIOVANNI prix chambre ?",
+        " Le tarif d'une chambre double de HÔTEL DOMINIQUE COLONNA ?",
+       # "quelles sont les activités économiques qui n’ont généralement pas encore été testées au titre de comparaisons internationales ?"
+       # "quels sont les 5 activités que doivent répondre de R-D ?",
+       # "de quoi parle le chapitre 4 ?",
+      #  "quels sont les Principaux objectifs de la quatrième édition",
         "qui a creer le pont du Vechju ?",
         "parle moi de LE VENACAIS",
       "quel est le tarif d'une chambre double a l'hotel arena ?",
+     " Chbre double HÔTEL ARENA prix chambre ?",
        # "quels sont les lieux pour faire de LE BERCEAU DU SPORT NATURE",
       #  "quel sont les endroit INCONTOURNABLES a visiter ?",
     # "le coffee cortenais ?"
@@ -104,18 +111,18 @@ def main():
       #  "pourvoi formé par M. X"
       #  "Quel article dit nul ne peut se pourvoir en cassation contre une décision à laquelle il n’a pas été partie ?"
     ]
-    context="Arrêt Cass. 2e civ., 12 octobre 1989, n° 89-61.262 La Cour de cassation, deuxième chambre civile, a statué le 12 octobre 1989 sur un pourvoi formé par M. Gérard Z, résidant à Ucciani (Corse). Le pourvoi visait un jugement du tribunal d’instance d’Ajaccio rendu le 11 mars 1989 en matière électorale, favorable à Mme X Y épouse A, résidant à Ajaccio."
+  #  context="Arrêt Cass. 2e civ., 12 octobre 1989, n° 89-61.262 La Cour de cassation, deuxième chambre civile, a statué le 12 octobre 1989 sur un pourvoi formé par M. Gérard Z, résidant à Ucciani (Corse). Le pourvoi visait un jugement du tribunal d’instance d’Ajaccio rendu le 11 mars 1989 en matière électorale, favorable à Mme X Y épouse A, résidant à Ajaccio."
 
     
     for q in queries:
         print_section(f"Test: '{q}'")
         
         # 1. Retrieval
-        results = pipeline.search(query=q, n_results=5 )
+        results = pipeline.search(query=q.strip(), n_results=5)
         display_results(results)
-        
+
         # 2. Generation
-        answer = generator.generate_answer(q, results)
+        answer = generator.generate_answer(q.strip(), results)
         print(f"\n{Colors.BOLD}🤖 RÉPONSE GÉNÉRÉE :{Colors.ENDC}")
         print(f"{Colors.GREEN}{answer}{Colors.ENDC}")
         print("-" * 20)

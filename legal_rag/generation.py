@@ -48,27 +48,29 @@ class AnswerGenerator:
         self.system_intro = DOMAIN_PROMPTS.get(DOMAIN, DOMAIN_PROMPTS["tourisme"])
         print(f"  🤖 Générateur initialisé — domaine : {DOMAIN.upper()} | modèle : {GENERATION_MODEL}")
 
-    # Seuil max de distance — chunks au-delà sont ignorés avant génération
-    # L2 normalisé : 0=identique, ~1.41=orthogonal, 2=opposé
-    # ✅ FIXED: 1.5 → 1.2 (stricter filtering, removes noise)
-    MAX_DISTANCE = 1.2
+    # Seuil max de distance L2 normalisée (nomic-embed-text, vecteurs unitaires)
+    # 0=identique, 1.41=orthogonal, 2=opposé
+    # 1.5 = cosine_similarity > 0 (chunk au moins vaguement lié à la query)
+    MAX_DISTANCE = 1.5
 
     def generate_answer(self, query: str, results: Dict) -> str:
         print(f"\n📝 Génération [{self.domain.upper()}] : '{query}'")
 
         context = self._build_context(results)
         if not context:
-            return "Je n'ai trouvé aucun passage suffisamment pertinent dans les documents pour répondre à cette question."
+            return "Je n'ai trouvé aucun passage pertinent dans les documents pour répondre à cette question."
 
         prompt = f"""{self.system_intro}
 
-RÈGLES ABSOLUES — tu dois les respecter sans exception :
-1. Réponds UNIQUEMENT à partir des passages fournis ci-dessous.
-2. Si la réponse n'est PAS dans les passages, réponds exactement : "Cette information ne figure pas dans les documents disponibles."
-3. N'invente aucun fait, nom, date, chiffre ou lieu.
-4. Ne complète pas avec tes connaissances générales.
-5. Cite le document source entre parenthèses après chaque information (ex : (Guide 2026 Partie2.pdf)).
-6. Sois concis et factuel.
+Tu dois répondre à la question en te basant sur les passages ci-dessous.
+
+Consignes :
+- Cherche attentivement dans TOUS les passages fournis avant de répondre.
+- Si un passage contient le nom d'un établissement mentionné dans la question, utilise ses informations.
+- Si plusieurs établissements sont dans les passages, réponds précisément pour celui demandé.
+- Cite les tarifs, adresses et infos pratiques tels qu'ils apparaissent dans les passages.
+- Si l'information n'est vraiment pas présente, dis-le clairement.
+- Ne complète pas avec tes connaissances générales.
 
 PASSAGES EXTRAITS DES DOCUMENTS :
 {context}

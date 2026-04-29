@@ -117,9 +117,7 @@ class ParentDocumentRetriever:
         if not child_results['ids'][0]:
             return {"ids": [[]], "documents": [[]], "metadatas": [[]], "distances": [[]]}
 
-        # Filtre par seuil de distance (1.2 = tolérance stricte, élimine le bruit)
-        # ✅ FIXED: 1.2 is stricter than previous 1.5, removes irrelevant chunks
-        MAX_DISTANCE = 1.2
+        MAX_DISTANCE = 1.5
         ids, docs, metas, dists = [], [], [], []
         for i, dist in enumerate(child_results['distances'][0]):
             if dist <= MAX_DISTANCE:

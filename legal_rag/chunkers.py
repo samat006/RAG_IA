@@ -153,3 +153,107 @@ class StructuralChunker:
             return text[-self.overlap:]
 
         return " ".join(sentences[-2:])
+
+
+# ─────────────────────────────────────────────────────────────
+# CHUNKER MARKDOWN — pour sortie pymupdf4llm
+# Découpe sur les titres (# ## ###) pour garder chaque section
+# (hôtel, activité, lieu) dans un chunk cohérent.
+# ─────────────────────────────────────────────────────────────
+class MarkdownChunker:
+
+    def __init__(
+        self,
+        max_chunk_size: int = 1500,
+        min_chunk_size: int = 150,
+        overlap: int = 300,
+    ):
+        self.max_chunk_size = max_chunk_size
+        self.min_chunk_size = min_chunk_size
+        self.overlap = overlap
+        # Correspond à ## Titre ou # Titre (niveaux 1–3)
+        self._heading_re = re.compile(r'^#{1,3}\s+', re.MULTILINE)
+
+    def chunk_document(self, text: str, metadata: DocumentMetadata) -> List[Dict]:
+        print(f"✂️ MarkdownChunker: {len(text)} chars")
+
+        if len(text) < self.max_chunk_size:
+            return [{"text": text, "metadata": metadata, "chunk_type": "full_document", "chunk_index": 0}]
+
+        sections = self._split_on_headings(text)
+        chunks = self._merge_sections(sections)
+
+        return [
+            {"text": chunk, "metadata": metadata, "chunk_type": "markdown_section", "chunk_index": i}
+            for i, chunk in enumerate(chunks)
+        ]
+
+    def _split_on_headings(self, text: str) -> List[str]:
+        """Découpe le texte aux titres Markdown tout en les conservant."""
+        parts = self._heading_re.split(text)
+        headings = self._heading_re.findall(text)
+
+        sections = []
+        # premier bloc avant tout titre
+        if parts[0].strip():
+            sections.append(parts[0].strip())
+
+        for heading, body in zip(headings, parts[1:]):
+            section = (heading + body).strip()
+            if section:
+                sections.append(section)
+
+        return sections or [text]
+
+    @staticmethod
+    def _is_heading(text: str) -> bool:
+        return text.lstrip().startswith('#')
+
+    def _merge_sections(self, sections: List[str]) -> List[str]:
+        """
+        Règle : chaque section qui commence par un titre ## (hôtel, restaurant, lieu…)
+        devient son propre chunk — on ne fusionne JAMAIS deux sections titrées ensemble.
+        Le texte d'intro (avant le premier titre) peut être attaché à la première section.
+        """
+        chunks = []
+        current = ""
+
+        for section in sections:
+            if len(section) > self.max_chunk_size:
+                if current.strip():
+                    chunks.append(current.strip())
+                    current = ""
+                chunks.extend(self._split_large(section))
+                continue
+
+            if not current:
+                current = section
+            elif self._is_heading(section):
+                # Nouvelle section titrée → toujours sauvegarder et repartir seul
+                chunks.append(current.strip())
+                current = section
+            elif len(current) + len(section) + 2 <= self.max_chunk_size:
+                # Texte de suite (non titré) → fusionner avec la section courante
+                current = current + "\n\n" + section
+            else:
+                chunks.append(current.strip())
+                current = section
+
+        if current.strip():
+            chunks.append(current.strip())
+
+        return chunks
+
+    def _split_large(self, text: str) -> List[str]:
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+        chunks, current = [], ""
+        for s in sentences:
+            if len(current) + len(s) <= self.max_chunk_size:
+                current = (current + " " + s).strip()
+            else:
+                if current:
+                    chunks.append(current)
+                current = s
+        if current:
+            chunks.append(current)
+        return chunks

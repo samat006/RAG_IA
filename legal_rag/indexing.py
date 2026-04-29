@@ -1,4 +1,5 @@
 from typing import List, Dict, Any, Optional
+import re
 import ollama
 from .models import DocumentMetadata
 from .config import chroma_client, EMBED_MODEL
@@ -75,16 +76,29 @@ class CorpusIndexer:
         
         return collection
     
+    @staticmethod
+    def _clean_for_embedding(text: str) -> str:
+        """Retire les balises Markdown avant embedding — améliore l'alignement sémantique."""
+        text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+        text = re.sub(r'\*{1,3}', '', text)
+        text = re.sub(r'_{1,2}', '', text)
+        text = re.sub(r'-{3,}', '\n', text)
+        text = re.sub(r'\[.*?\]\(.*?\)', '', text)
+        text = re.sub(r'\n{3,}', '\n\n', text)
+        return text.strip()
+
     def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
         """
         Génération embeddings via Ollama (local, gratuit).
-
+        Le texte est nettoyé du Markdown avant embedding.
         Modèle: nomic-embed-text (768 dims, multilingue)
         """
         print(f"     🧠 Embedding {len(texts)} chunks...")
 
+        clean_texts = [self._clean_for_embedding(t) for t in texts]
+
         try:
-            response = ollama.embed(model=EMBED_MODEL, input=texts)
+            response = ollama.embed(model=EMBED_MODEL, input=clean_texts)
             embeddings = response.embeddings
             print(f"    ✅ {len(embeddings)} embeddings générés")
             return embeddings
@@ -167,6 +181,20 @@ class CorpusIndexer:
         
         print(f"  ✅ {len(valid_chunks)} chunks indexés")
     
+    @staticmethod
+    def _extract_keywords(query: str) -> List[str]:
+        """
+        Extrait les mots-clés importants d'une query pour la recherche par mot exact.
+        Retourne les séquences de mots en majuscules et les noms propres (> 4 chars).
+        """
+        import re as _re
+        # Séquences de mots commençant par une majuscule ou entièrement en majuscules
+        tokens = _re.findall(r'\b[A-ZÀÂÄÉÈÊËÎÏÔÙÛÜ][A-ZÀÂÄÉÈÊËÎÏÔÙÛÜa-zàâäéèêëîïôùûü]+\b', query)
+        # Filtre les mots trop courts et les mots fonctionnels
+        stopwords = {'Quel','Quelle','Quels','Tarif','Prix','Chambre','Double','Hôtel','Hotel','HOTEL','HÔTEL'}
+        keywords = [t for t in tokens if len(t) >= 4 and t not in stopwords]
+        return keywords[:3]  # max 3 mots-clés
+
     def search(
         self,
         query: str,
@@ -174,21 +202,50 @@ class CorpusIndexer:
         filters: Optional[Dict] = None
     ) -> Dict:
         """
-        Recherche hybride dans le corpus.
+        Recherche hybride : dense (sémantique) + keyword exact.
+        Les chunks qui contiennent les mots-clés exacts de la query
+        sont ajoutés aux résultats vectoriels et dédoublonnés.
         """
         print(f"\n🔍 Recherche: '{query}'")
-        if filters:
-            print(f"   Filtres: {filters}")
-        
-        # Embedding de la requête
+
+        # 1. Recherche vectorielle dense
         query_embedding = self.generate_embeddings([query])[0]
-        
-        # Recherche ChromaDB (ne pas passer where=None — bug ChromaDB sur certaines versions)
         query_kwargs: Dict = {"query_embeddings": [query_embedding], "n_results": n_results}
         if filters:
             query_kwargs["where"] = filters
-        results = self.collection.query(**query_kwargs)
-        
-        print(f"   ✅ {len(results['ids'][0])} résultats")
-        
-        return results
+        dense_results = self.collection.query(**query_kwargs)
+
+        # 2. Recherche par mots-clés (keyword exact) — booste les entités nommées
+        keywords = self._extract_keywords(query)
+        keyword_docs, keyword_metas, keyword_ids = [], [], []
+        seen_ids = set(dense_results['ids'][0])
+
+        for kw in keywords:
+            try:
+                kw_res = self.collection.get(
+                    where_document={"$contains": kw},
+                    limit=3
+                )
+                for kid, kdoc, kmeta in zip(kw_res['ids'], kw_res['documents'], kw_res['metadatas']):
+                    if kid not in seen_ids:
+                        keyword_ids.append(kid)
+                        keyword_docs.append(kdoc)
+                        keyword_metas.append(kmeta)
+                        seen_ids.add(kid)
+            except Exception:
+                pass
+
+        # 3. Fusionner : résultats vectoriels d'abord, puis les keyword-only
+        merged_ids  = dense_results['ids'][0]       + keyword_ids
+        merged_docs = dense_results['documents'][0]  + keyword_docs
+        merged_metas= dense_results['metadatas'][0]  + keyword_metas
+        merged_dists= dense_results['distances'][0]  + [0.5] * len(keyword_ids)
+
+        print(f"   ✅ {len(dense_results['ids'][0])} dense + {len(keyword_ids)} keyword = {len(merged_ids)} total")
+
+        return {
+            'ids':       [merged_ids],
+            'documents': [merged_docs],
+            'metadatas': [merged_metas],
+            'distances': [merged_dists],
+        }
