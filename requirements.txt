@@ -4,4 +4,6 @@ pdfplumber
 python-dotenv
 spacy
 pymupdf
+pymupdf4llm
+docling
 ragas
