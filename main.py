@@ -89,6 +89,8 @@ def main():
     print_header("🔍 TESTS DE RECHERCHE & GÉNÉRATION")
     
     queries = [
+        "quel est l'hotel le moins cher corte ?",
+        "quel est le tarif d'une chambre double à hôtel sampiero ?",
         "y'a il GESTES ET SAVOIR-FAIRES sur CORSES ?",
         "Quel est le tarif d'une chambre double à l'hôtel SAMPIERO CORSO ?",
         " Le tarif d'une chambre double HÔTEL SAN GIOVANNI prix chambre ?",
