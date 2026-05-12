@@ -85,7 +85,11 @@ RÉPONSE :"""
             return f"❌ Erreur lors de la génération: {e}"
 
     def _build_context(self, results: Dict) -> str:
-        """Construit le contexte en filtrant les chunks trop éloignés de la requête."""
+        """
+        Construit le contexte en filtrant les chunks trop éloignés.
+        Chaque passage est préfixé de sa source (fichier local ou URL web).
+        Retourne "" si aucun chunk pertinent → le générateur refusera de répondre.
+        """
         context_parts = []
         if not results or not results['ids'] or not results['ids'][0]:
             return ""
@@ -93,14 +97,15 @@ RÉPONSE :"""
         distances = results.get('distances', [[]])[0]
 
         for i, (doc, metadata) in enumerate(zip(results['documents'][0], results['metadatas'][0]), 1):
-            # Filtre distance : on ignore les chunks non pertinents
             dist = distances[i - 1] if distances and i - 1 < len(distances) else 0
             if dist > self.MAX_DISTANCE:
                 print(f"    ⏭️  Chunk {i} ignoré (distance={dist:.3f} > {self.MAX_DISTANCE})")
                 continue
 
             source = metadata.get('source_file', 'source inconnue')
-            context_parts.append(f"[Source : {source}]\n{doc}")
+            source_type = metadata.get('source_type', 'inconnu')
+            label = f"URL : {source}" if source_type == "web" else f"Document : {source}"
+            context_parts.append(f"[{label}]\n{doc}")
 
         return "\n\n---\n\n".join(context_parts)
 

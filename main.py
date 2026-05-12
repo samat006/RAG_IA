@@ -62,6 +62,7 @@ def main():
     parser.add_argument("--corpus", default="./documents/test", help="Chemin vers le dossier de documents")
     parser.add_argument("--reset", action="store_true", help="Vider et ré-indexer la collection depuis zéro")
     parser.add_argument("--dump", action="store_true", help="Sauvegarder le texte extrait dans un .extracted.txt par document")
+    parser.add_argument("--web", action="store_true", help="Indexer les sources web (WEB_SOURCES) sans toucher aux PDFs")
 
     args = parser.parse_args()
 
@@ -77,7 +78,15 @@ def main():
     # Initialisation du générateur
     generator = AnswerGenerator()
 
-    # Ingestion
+    # Ingestion web uniquement (sans re-indexer les PDFs)
+    if args.web:
+        from legal_rag.config import WEB_SOURCES
+        print_section("INGESTION WEB UNIQUEMENT")
+        pipeline.ingest_web_sources(WEB_SOURCES)
+        print_header("✅ INGESTION WEB TERMINÉE")
+        return
+
+    # Ingestion documents + web
     if not os.path.exists(args.corpus):
         print(f"{Colors.FAIL}❌ Créez le répertoire '{args.corpus}' et placez-y vos documents{Colors.ENDC}")
         return
@@ -89,6 +98,7 @@ def main():
     print_header("🔍 TESTS DE RECHERCHE & GÉNÉRATION")
     
     queries = [
+        "ou je peux faire de runcation ?",
         "quel est l'hotel le moins cher corte ?",
         "quel est le tarif d'une chambre double à hôtel sampiero ?",
         "y'a il GESTES ET SAVOIR-FAIRES sur CORSES ?",
@@ -99,10 +109,10 @@ def main():
        # "quels sont les 5 activités que doivent répondre de R-D ?",
        # "de quoi parle le chapitre 4 ?",
       #  "quels sont les Principaux objectifs de la quatrième édition",
-        "qui a creer le pont du Vechju ?",
-        "parle moi de LE VENACAIS",
-      "quel est le tarif d'une chambre double a l'hotel arena ?",
-     " Chbre double HÔTEL ARENA prix chambre ?",
+      ####  "qui a creer le pont du Vechju ?",
+      ###  "parle moi de LE VENACAIS",
+   #  ## "quel est le tarif d'une chambre double a l'hotel arena ?",
+   #  " Chbre double HÔTEL ARENA prix chambre ?",
        # "quels sont les lieux pour faire de LE BERCEAU DU SPORT NATURE",
       #  "quel sont les endroit INCONTOURNABLES a visiter ?",
     # "le coffee cortenais ?"

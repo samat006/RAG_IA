@@ -8,7 +8,8 @@ from .loaders import PDFLoader, XMLLoader, JSONLoader
 from .chunkers import StructuralChunker, MarkdownChunker
 from .indexing import CorpusIndexer
 from .retrieval import ParentDocumentRetriever
-from .config import DOMAIN, chroma_client, USE_OCR, PDF_MODE
+from .config import DOMAIN, chroma_client, USE_OCR, PDF_MODE, WEB_SOURCES, WEB_MODE, WEB_FALLBACK_THRESHOLD
+from .web_loader import WebLoader
 
 def sliding_window_splitter(text, chunk_size, overlap):
     """
@@ -213,6 +214,7 @@ class IngestionPipeline:
 
         print(f"\n🗂️  INGESTION DU CORPUS ({self.retriever_type.upper()}): {corpus_dir}")
 
+        # 1. Documents locaux (PDF, XML, JSON)
         files = list(corpus_path.glob("**/*.*"))
         for f in files:
             try:
@@ -225,10 +227,63 @@ class IngestionPipeline:
             except Exception as e:
                 print(f"❌ Erreur sur {f.name}: {e}")
 
+        # 2. Sources web (si configurées)
+        if WEB_SOURCES:
+            self.ingest_web_sources(WEB_SOURCES)
+
+    def ingest_web_sources(self, urls: list):
+        """Scrape et indexe les sources web configurées dans WEB_SOURCES."""
+        print(f"\n🌐 INGESTION WEB ({len(urls)} site(s))")
+        for base_url in urls:
+            loader = WebLoader(base_url, max_pages=50)
+            documents = loader.load_all()
+            for doc in documents:
+                raw_text = doc["raw_text"]
+                metadata = doc["metadata"]
+                chunks = self.chunker.chunk_document(raw_text, metadata)
+                if self.retriever_type != "parent-child":
+                    self.indexer.index_document(chunks, enrich=False)
+
     def search(self, query: str, n_results: int = 3, filters: Optional[Dict] = None):
-        """Recherche unifiée."""
+        """
+        Recherche selon WEB_MODE :
+        - "separate" : cherche d'abord dans les documents locaux.
+                       Si aucun résultat sous le seuil → bascule sur le web.
+        - "mixed"    : fusionne directement les résultats docs + web.
+        Cite toujours la source dans les métadonnées.
+        """
         if self.retriever_type == "parent-child":
-            # Note: filters non implémentés dans parent-child pour ce TP simple
             return self.parent_retriever.retrieve_with_parent(query, n_results)
+
+        if WEB_MODE == "separate":
+            return self._search_separate(query, n_results)
         else:
             return self.indexer.search(query, n_results, filters)
+
+    def _search_separate(self, query: str, n_results: int) -> dict:
+        """
+        Mode séparé :
+        1. Cherche uniquement dans les documents locaux (source_type != web).
+        2. Si le meilleur résultat dépasse WEB_FALLBACK_THRESHOLD → bascule web.
+        3. Toujours inclure la source dans les métadonnées.
+        """
+        # Étape 1 — documents locaux uniquement
+        doc_results = self.indexer.search(
+            query, n_results,
+            filters={"source_type": {"$in": ["pdf", "xml", "json"]}}
+        )
+
+        distances = doc_results.get("distances", [[]])[0]
+        best_dist = min(distances) if distances else 999
+
+        if best_dist <= WEB_FALLBACK_THRESHOLD:
+            print(f"   📄 Réponse depuis les documents (dist={best_dist:.3f})")
+            return doc_results
+
+        # Étape 2 — fallback web
+        print(f"   🌐 Pas de document pertinent (dist={best_dist:.3f} > {WEB_FALLBACK_THRESHOLD}) → recherche web")
+        web_results = self.indexer.search(
+            query, n_results,
+            filters={"source_type": "web"}
+        )
+        return web_results

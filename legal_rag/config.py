@@ -12,14 +12,32 @@ DOMAIN = "tourisme"
 
 # PDF_MODE : stratégie d'extraction pour les PDFs non structurés
 # "docling"    : IBM Docling, analyse layout par deep learning ← MEILLEUR POUR BROCHURES
-#                (pip install docling, télécharge ~1-2GB de modèles au 1er run)
-# "vision"     : Ollama LLaVA — lit la page comme un humain (ollama pull llava)
-# "pdfplumber" : détection auto colonnes — correct pour la plupart des cas
-# "markdown"   : pymupdf4llm → Markdown (limité sur layouts grille)
-# "hybrid"     : PyMuPDF mots-XY + OCR par page au besoin
-# "ocr"        : OCR Tesseract complet (PDFs scannés)
-# "pymupdf"    : PyMuPDF texte brut (ancien comportement)
+# "vision"     : Ollama LLaVA (ollama pull llava)
+# "pdfplumber" : détection auto colonnes
+# "markdown"   : pymupdf4llm → Markdown
+# "hybrid"     : PyMuPDF + OCR par page
+# "ocr"        : OCR Tesseract complet
+# "pymupdf"    : PyMuPDF texte brut
 PDF_MODE = "docling"
+
+# ── Sources web ────────────────────────────────────────────────
+# Liste des sites à indexer. Ajouter autant d'URLs que nécessaire.
+# Mettre [] pour désactiver la recherche web.
+WEB_SOURCES = [
+    "https://tourisme-centrecorse.corsica",
+    # "https://autre-site.com",
+]
+
+# WEB_MODE : comportement quand documents ET web sont disponibles
+# "separate" : cherche d'abord dans les documents locaux ;
+#              si rien de pertinent → cherche sur le web.
+#              Cite toujours la source. Refuse de répondre sans source.
+# "mixed"    : fusionne les résultats documents + web avant de répondre.
+WEB_MODE = "mixed"
+
+# Seuil de distance en dessous duquel on considère qu'un document répond
+# (mode "separate"). Si tous les résultats sont au-dessus → bascule sur le web.
+WEB_FALLBACK_THRESHOLD = 0.5
 
 # Rétrocompatibilité
 USE_OCR = False
