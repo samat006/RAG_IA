@@ -98,6 +98,7 @@ def main():
     print_header("🔍 TESTS DE RECHERCHE & GÉNÉRATION")
     
     queries = [
+        "parle moi du patrimoine bâti  ?",
         "ou je peux faire de runcation ?",
         "quel est l'hotel le moins cher corte ?",
         "quel est le tarif d'une chambre double à hôtel sampiero ?",
@@ -133,13 +134,24 @@ def main():
         results = pipeline.search(query=q.strip(), n_results=5)
         display_results(results)
 
-        # 2. Generation
+        # 2. Generation — ignorée si aucun résultat ou contexte insuffisant
+        if not results or not results.get('ids') or not results['ids'][0]:
+            print(f"{Colors.WARNING}  ⏭️  Aucun résultat — génération ignorée{Colors.ENDC}")
+            print("-" * 20)
+            continue
+
+        context = generator.build_context(results)
+        if not context:
+            print(f"{Colors.WARNING}  ⏭️  Passages trop éloignés — génération ignorée{Colors.ENDC}")
+            print("-" * 20)
+            continue
+
         answer = generator.generate_answer(q.strip(), results)
         print(f"\n{Colors.BOLD}🤖 RÉPONSE GÉNÉRÉE :{Colors.ENDC}")
         print(f"{Colors.GREEN}{answer}{Colors.ENDC}")
         print("-" * 20)
        # evaluate_rag(q,answer,context)
-    print_header("✅ TP TERMINÉ")
+    print_header("✅  TERMINÉ")
 
 
 if __name__ == "__main__":

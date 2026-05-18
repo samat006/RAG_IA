@@ -244,7 +244,7 @@ class IngestionPipeline:
                 if self.retriever_type != "parent-child":
                     self.indexer.index_document(chunks, enrich=False)
 
-    def search(self, query: str, n_results: int = 3, filters: Optional[Dict] = None):
+    def search(self, query: str, n_results: int = 5, filters: Optional[Dict] = None):
         """
         Recherche selon WEB_MODE :
         - "separate" : cherche d'abord dans les documents locaux.
@@ -258,7 +258,7 @@ class IngestionPipeline:
         if WEB_MODE == "separate":
             return self._search_separate(query, n_results)
         else:
-            return self.indexer.search(query, n_results, filters)
+            return self._search_separate(query, n_results)
 
     def _search_separate(self, query: str, n_results: int) -> dict:
         """

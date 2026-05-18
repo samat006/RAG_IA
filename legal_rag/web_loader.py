@@ -143,7 +143,7 @@ class WebLoader:
             extras = "\n".join(f"{k}: {v}" for k, v in structured.items() if v)
             text = extras + "\n\n" + text if extras else text
 
-        if len(text.strip()) < 80:
+        if len(text.strip()) < 30:
             return {}
 
         metadata = DocumentMetadata(

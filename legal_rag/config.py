@@ -37,7 +37,7 @@ WEB_MODE = "mixed"
 
 # Seuil de distance en dessous duquel on considère qu'un document répond
 # (mode "separate"). Si tous les résultats sont au-dessus → bascule sur le web.
-WEB_FALLBACK_THRESHOLD = 0.5
+WEB_FALLBACK_THRESHOLD = 0.75
 
 # Rétrocompatibilité
 USE_OCR = False

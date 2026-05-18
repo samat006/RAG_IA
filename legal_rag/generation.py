@@ -53,6 +53,10 @@ class AnswerGenerator:
     # 1.5 = cosine_similarity > 0 (chunk au moins vaguement lié à la query)
     MAX_DISTANCE = 1.5
 
+    def build_context(self, results: Dict) -> str:
+        """Public — permet de vérifier le contexte avant d'appeler le LLM."""
+        return self._build_context(results)
+
     def generate_answer(self, query: str, results: Dict) -> str:
         print(f"\n📝 Génération [{self.domain.upper()}] : '{query}'")
 
@@ -62,7 +66,7 @@ class AnswerGenerator:
 
         prompt = f"""{self.system_intro}
 
-Tu dois répondre à la question en te basant sur les passages ci-dessous.
+Tu dois répondre à la question en te basant uniquement uniquement sur les passages ci-dessous.
 
 Consignes :
 - Cherche attentivement dans TOUS les passages fournis avant de répondre.
