@@ -1,13 +1,24 @@
 import re
+import os
 import json
+import argparse
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context
 import ollama
 from legal_rag.pipeline import IngestionPipeline
 from legal_rag.generation import AnswerGenerator
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--model", default="phi3", help="Modèle Ollama à utiliser (ex: phi3, mistral)")
+parser.add_argument("--port",  default=5000, type=int)
+args, _ = parser.parse_known_args()
+
+os.environ["GENERATION_MODEL"] = args.model
+
 from legal_rag.config import GENERATION_MODEL
 
 app = Flask(__name__)
 
+print(f"🤖 Modèle : {GENERATION_MODEL}")
 pipeline = IngestionPipeline(collection_name="legal_corpus_m2_tp", retriever_type="recursive")
 pipeline.ingest_corpus("./documents/test")
 generator = AnswerGenerator()
@@ -90,4 +101,4 @@ RÉPONSE :"""
 
 
 if __name__ == "__main__":
-    app.run(debug=False, port=5000, threaded=True)
+    app.run(debug=False, port=args.port, threaded=True)

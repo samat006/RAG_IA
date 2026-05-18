@@ -1,10 +1,11 @@
+import os
 import chromadb
 from chromadb.config import Settings
 
 # Modèles Ollama (local, 100% gratuit)
-# Prérequis : ollama pull nomic-embed-text && ollama pull mistral
+# Prérequis : ollama pull nomic-embed-text && ollama pull phi3
 EMBED_MODEL = "nomic-embed-text"   # 768 dims, multilingue
-GENERATION_MODEL = "mistral"        # 7B, bon sur le français
+GENERATION_MODEL = os.environ.get("GENERATION_MODEL", "mistral")
 
 # Domaine du corpus
 # Options : "legal", "municipal", "medical", "rh", "technique"
