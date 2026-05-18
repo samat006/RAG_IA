@@ -45,8 +45,9 @@ class AnswerGenerator:
 
     def __init__(self):
         self.domain = DOMAIN
+        self.model = GENERATION_MODEL
         self.system_intro = DOMAIN_PROMPTS.get(DOMAIN, DOMAIN_PROMPTS["tourisme"])
-        print(f"  🤖 Générateur initialisé — domaine : {DOMAIN.upper()} | modèle : {GENERATION_MODEL}")
+        print(f"  🤖 Générateur initialisé — domaine : {DOMAIN.upper()} | modèle : {self.model}")
 
     # Seuil max de distance L2 normalisée (nomic-embed-text, vecteurs unitaires)
     # 0=identique, 1.41=orthogonal, 2=opposé
@@ -57,32 +58,48 @@ class AnswerGenerator:
         """Public — permet de vérifier le contexte avant d'appeler le LLM."""
         return self._build_context(results)
 
-    def generate_answer(self, query: str, results: Dict) -> str:
-        print(f"\n📝 Génération [{self.domain.upper()}] : '{query}'")
-
+    def build_prompt(self, query: str, results: Dict) -> str:
+        """Construit le prompt complet — utilisé par generate_answer et stream_answer."""
         context = self._build_context(results)
         if not context:
-            return "Je n'ai trouvé aucun passage pertinent dans les documents pour répondre à cette question."
+            return ""
+        return f"""{self.system_intro}
 
-        prompt = f"""{self.system_intro}
+Règles strictes :
+- Réponds UNIQUEMENT à ce qui est demandé, de façon courte et directe.
+- Utilise SEULEMENT les passages qui répondent précisément à la question, ignore les autres.
+- Ne mélange pas plusieurs sujets dans la même réponse.
+- Si la question contient une faute de frappe, interprète-la intelligemment.
+- Si l'information est absente, réponds uniquement : "Je n'ai pas cette information dans les documents."
+- Jamais de connaissance générale, jamais d'invention.
 
-Tu dois répondre à la question en te basant uniquement uniquement sur les passages ci-dessous.
-
-Consignes :
-- Cherche attentivement dans TOUS les passages fournis avant de répondre.
-- Si un passage contient le nom d'un établissement mentionné dans la question, utilise ses informations.
-- Si plusieurs établissements sont dans les passages, réponds précisément pour celui demandé.
-- Cite les tarifs, adresses et infos pratiques tels qu'ils apparaissent dans les passages.
-- Si l'information n'est vraiment pas présente, dis-le clairement.
-- Ne complète pas avec tes connaissances générales.
-
-PASSAGES EXTRAITS DES DOCUMENTS :
+PASSAGES :
 {context}
 
 QUESTION : {query}
+RÉPONSE (courte et directe) :"""
 
-RÉPONSE :"""
+    def stream_answer(self, query: str, results: Dict):
+        """Génère la réponse token par token — même pipeline que generate_answer."""
+        prompt = self.build_prompt(query, results)
+        if not prompt:
+            return
+        stream = ollama.chat(
+            model=self.model,
+            messages=[{"role": "user", "content": prompt}],
+            stream=True,
+            options={"temperature": 0.0}
+        )
+        for chunk in stream:
+            token = chunk.message.content
+            if token:
+                yield token
 
+    def generate_answer(self, query: str, results: Dict) -> str:
+        print(f"\n📝 Génération [{self.domain.upper()}] : '{query}'")
+        prompt = self.build_prompt(query, results)
+        if not prompt:
+            return "Je n'ai trouvé aucun passage pertinent dans les documents pour répondre à cette question."
         try:
             return self._generate_ollama(prompt)
         except Exception as e:
@@ -115,8 +132,8 @@ RÉPONSE :"""
 
     def _generate_ollama(self, prompt: str) -> str:
         response = ollama.chat(
-            model=GENERATION_MODEL,
+            model=self.model,
             messages=[{"role": "user", "content": prompt}],
-            options={"temperature": 0.0}  # 0 = déterministe, zéro hallucination
+            options={"temperature": 0.0}
         )
         return response.message.content

@@ -3,7 +3,6 @@ import os
 import json
 import argparse
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context
-import ollama
 from legal_rag.pipeline import IngestionPipeline
 from legal_rag.generation import AnswerGenerator
 
@@ -14,14 +13,12 @@ args, _ = parser.parse_known_args()
 
 os.environ["GENERATION_MODEL"] = args.model
 
-from legal_rag.config import GENERATION_MODEL
-
 app = Flask(__name__)
 
-print(f"🤖 Modèle : {GENERATION_MODEL}")
 pipeline = IngestionPipeline(collection_name="legal_corpus_m2_tp", retriever_type="recursive")
 pipeline.ingest_corpus("./documents/test")
 generator = AnswerGenerator()
+print(f"🤖 Modèle : {generator.model}")
 
 GREETINGS = re.compile(
     r"^\s*(bonjour|bonsoir|salut|hello|hi|coucou|hey|bonne\s+journée|bonne\s+soirée)[!?,.\s]*$",
@@ -72,29 +69,9 @@ def ask():
         label = raw.split("/")[-1].split("\\")[-1] or raw or "source"
         sources.append({"label": label, "dist": round(dist, 2) if dist is not None else None})
 
-    # Prompt
-    prompt = generator.system_intro + f"""
-
-Réponds UNIQUEMENT en te basant sur les passages suivants. Si l'info est absente, dis-le clairement.
-
-PASSAGES :
-{context}
-
-QUESTION : {query}
-RÉPONSE :"""
-
-    # Streaming Ollama
     def generate():
-        stream = ollama.chat(
-            model=GENERATION_MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            stream=True,
-            options={"temperature": 0.0}
-        )
-        for chunk in stream:
-            token = chunk.message.content
-            if token:
-                yield f"data: {json.dumps({'token': token})}\n\n"
+        for token in generator.stream_answer(query, results):
+            yield f"data: {json.dumps({'token': token})}\n\n"
         yield f"data: {json.dumps({'done': True, 'sources': sources})}\n\n"
 
     return Response(stream_with_context(generate()), mimetype="text/event-stream")
