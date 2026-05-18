@@ -29,6 +29,9 @@ WEB_SOURCES = [
     # "https://autre-site.com",
 ]
 
+# Nombre max de pages à scraper par site. None = pas de limite.
+WEB_MAX_PAGES = None
+
 # WEB_MODE : comportement quand documents ET web sont disponibles
 # "separate" : cherche d'abord dans les documents locaux ;
 #              si rien de pertinent → cherche sur le web.

@@ -8,7 +8,7 @@ from .loaders import PDFLoader, XMLLoader, JSONLoader
 from .chunkers import StructuralChunker, MarkdownChunker
 from .indexing import CorpusIndexer
 from .retrieval import ParentDocumentRetriever
-from .config import DOMAIN, chroma_client, USE_OCR, PDF_MODE, WEB_SOURCES, WEB_MODE, WEB_FALLBACK_THRESHOLD
+from .config import DOMAIN, chroma_client, USE_OCR, PDF_MODE, WEB_SOURCES, WEB_MODE, WEB_FALLBACK_THRESHOLD, WEB_MAX_PAGES
 from .web_loader import WebLoader
 
 def sliding_window_splitter(text, chunk_size, overlap):
@@ -235,7 +235,7 @@ class IngestionPipeline:
         """Scrape et indexe les sources web configurées dans WEB_SOURCES."""
         print(f"\n🌐 INGESTION WEB ({len(urls)} site(s))")
         for base_url in urls:
-            loader = WebLoader(base_url, max_pages=50)
+            loader = WebLoader(base_url, max_pages=WEB_MAX_PAGES)
             documents = loader.load_all()
             for doc in documents:
                 raw_text = doc["raw_text"]

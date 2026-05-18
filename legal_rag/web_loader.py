@@ -44,9 +44,11 @@ class WebLoader:
         urls = self._discover_urls()
         print(f"  {len(urls)} URLs découvertes")
 
+        pages = urls if self.max_pages is None else urls[:self.max_pages]
+        total = len(pages)
         documents = []
-        for i, url in enumerate(urls[:self.max_pages], 1):
-            print(f"  [{i}/{min(len(urls), self.max_pages)}] {url}")
+        for i, url in enumerate(pages, 1):
+            print(f"  [{i}/{total}] {url}")
             doc = self._load_page(url)
             if doc and doc["raw_text"].strip():
                 documents.append(doc)
