@@ -41,7 +41,11 @@ WEB_MODE = "mixed"
 
 # Seuil de distance en dessous duquel on considère qu'un document répond
 # (mode "separate"). Si tous les résultats sont au-dessus → bascule sur le web.
-WEB_FALLBACK_THRESHOLD = 0.75
+WEB_FALLBACK_THRESHOLD = 0.6
+
+# Seuil max de distance L2 pour les chunks envoyés au LLM.
+# 0=identique, 1.41=orthogonal — au-dessus, le chunk est ignoré.
+MAX_DISTANCE = 1.5
 
 # Rétrocompatibilité
 USE_OCR = False

@@ -1,6 +1,6 @@
 from typing import Dict
 import ollama
-from .config import GENERATION_MODEL, DOMAIN
+from .config import GENERATION_MODEL, DOMAIN, MAX_DISTANCE
 
 # ── Personnalité de l'assistant par domaine ──────────────────────────────────
 DOMAIN_PROMPTS = {
@@ -52,7 +52,7 @@ class AnswerGenerator:
     # Seuil max de distance L2 normalisée (nomic-embed-text, vecteurs unitaires)
     # 0=identique, 1.41=orthogonal, 2=opposé
     # 1.5 = cosine_similarity > 0 (chunk au moins vaguement lié à la query)
-    MAX_DISTANCE = 1.5
+    MAX_DISTANCE = MAX_DISTANCE
 
     def build_context(self, results: Dict) -> str:
         """Public — permet de vérifier le contexte avant d'appeler le LLM."""
@@ -70,7 +70,8 @@ Règles strictes :
 - Utilise SEULEMENT les passages qui répondent précisément à la question, ignore les autres.
 - Ne mélange pas plusieurs sujets dans la même réponse.
 - Si la question contient une faute de frappe, interprète-la intelligemment.
-- Si l'information est absente, réponds uniquement : "Je n'ai pas cette information dans les documents."
+-tu dois absolument citer tes sources (ex: 'Source : [nom du document]') pour chaque information utilisée.
+- Si l'information est absente, réponds uniquement : "Je n'ai pas cette information veuillez me fournir plus de détails s'il vous plaît."
 - Jamais de connaissance générale, jamais d'invention.
 
 PASSAGES :

@@ -2,7 +2,7 @@ import re
 import os
 import json
 import argparse
-from flask import Flask, request, jsonify, render_template, Response, stream_with_context
+from flask import Flask, request, jsonify, render_template, Response, stream_with_context, send_from_directory
 from legal_rag.pipeline import IngestionPipeline
 from legal_rag.generation import AnswerGenerator
 
@@ -26,9 +26,17 @@ GREETINGS = re.compile(
 )
 
 
+DOCS_DIR = os.path.abspath("./documents/test")
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/documents/<path:filename>")
+def serve_document(filename):
+    return send_from_directory(DOCS_DIR, filename)
 
 
 @app.route("/ask", methods=["POST"])
@@ -63,11 +71,21 @@ def ask():
     # Sources
     sources = []
     distances = results.get("distances", [[]])[0]
+    seen = set()
     for i, meta in enumerate(results["metadatas"][0]):
         dist = distances[i] if i < len(distances) else None
         raw = meta.get("source_file", "")
-        label = raw.split("/")[-1].split("\\")[-1] or raw or "source"
-        sources.append({"label": label, "dist": round(dist, 2) if dist is not None else None})
+        source_type = meta.get("source_type", "")
+        filename = raw.split("/")[-1].split("\\")[-1] or raw or "source"
+        if source_type == "web":
+            url = raw
+        else:
+            url = f"/documents/{filename}"
+        key = filename
+        if key in seen:
+            continue
+        seen.add(key)
+        sources.append({"label": filename, "url": url, "dist": round(dist, 2) if dist is not None else None})
 
     def generate():
         for token in generator.stream_answer(query, results):

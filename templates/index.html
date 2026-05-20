@@ -79,7 +79,17 @@
       border-radius: 20px;
       padding: 2px 10px;
       font-size: 0.75rem;
+      text-decoration: none;
+      cursor: pointer;
     }
+    .chip:hover { background: #c7d2fe; }
+
+    .inline-link {
+      color: #2563eb;
+      text-decoration: underline dotted;
+      font-weight: 500;
+    }
+    .inline-link:hover { color: #1d4ed8; }
 
     .typing {
       display: flex;
@@ -176,12 +186,33 @@
     const row = document.createElement("div");
     row.className = "sources";
     sources.forEach(s => {
-      const chip = document.createElement("span");
+      const chip = document.createElement("a");
       chip.className = "chip";
+      chip.href = s.url;
+      chip.target = "_blank";
+      chip.rel = "noopener noreferrer";
       chip.textContent = `📄 ${s.label}${s.dist !== null ? " · " + s.dist : ""}`;
       row.appendChild(chip);
     });
     wrap.appendChild(row);
+  }
+
+  function linkify(text, sources) {
+    // Échappe le texte brut pour éviter l'injection HTML
+    let safe = text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\n/g, "<br>");
+
+    // Remplace chaque nom de source cité dans le texte par un lien
+    sources.forEach(s => {
+      if (!s.url) return;
+      const escaped = s.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(escaped, "gi");
+      safe = safe.replace(re, `<a href="${s.url}" target="_blank" rel="noopener" class="inline-link">${s.label}</a>`);
+    });
+    return safe;
   }
 
   function addTyping() {
@@ -215,6 +246,7 @@
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buf = "";
+      let fullText = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -228,7 +260,8 @@
           const data = JSON.parse(line.slice(5).trim());
 
           if (data.token) {
-            bubble.textContent += data.token;
+            fullText += data.token;
+            bubble.textContent = fullText;
             chat.scrollTop = chat.scrollHeight;
           } else if (data.error) {
             bubble.className = "bubble warning";
@@ -236,6 +269,8 @@
               ? "⚠️ Aucun document trouvé pour cette question."
               : "⚠️ Les passages trouvés ne sont pas assez pertinents.";
           } else if (data.done) {
+            // Linkifier les sources citées dans le texte de la réponse
+            bubble.innerHTML = linkify(fullText, data.sources || []);
             addSources(wrap, data.sources || []);
           }
         }
