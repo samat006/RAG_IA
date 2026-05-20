@@ -55,7 +55,7 @@ def ask():
         return Response(stream_with_context(greet()), mimetype="text/event-stream")
 
     # Retrieval
-    results = pipeline.search(query=query, n_results=5)
+    results = pipeline.search(query=query, n_results=8)
 
     no_ids = not results or not results.get("ids") or not results["ids"][0]
     if no_ids:

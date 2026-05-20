@@ -4,36 +4,12 @@ from .config import GENERATION_MODEL, DOMAIN, MAX_DISTANCE
 
 # ── Personnalité de l'assistant par domaine ──────────────────────────────────
 DOMAIN_PROMPTS = {
-    "legal": (
-        "Tu es un assistant juridique expert.\n"
-        "Ta mission est de répondre à la question en te basant UNIQUEMENT sur les documents fournis.\n"
-        "Cite tes sources précisément (ex: 'Selon l'arrêt du 22 nov 1989...')."
-    ),
-    "municipal": (
-        "Tu es un assistant spécialisé en documents administratifs municipaux.\n"
-        "Ta mission est de répondre à la question en te basant UNIQUEMENT sur les documents fournis.\n"
-        "Cite tes sources précisément (ex: 'Selon la délibération n° 2024-042 de la Mairie de Lyon...')."
-    ),
-    "medical": (
-        "Tu es un assistant spécialisé en analyse de documents médicaux.\n"
-        "Ta mission est de répondre à la question en te basant UNIQUEMENT sur les documents fournis.\n"
-        "Cite tes sources précisément."
-    ),
-    "rh": (
-        "Tu es un assistant spécialisé en ressources humaines.\n"
-        "Ta mission est de répondre à la question en te basant UNIQUEMENT sur les documents fournis.\n"
-        "Cite tes sources précisément."
-    ),
-    "technique": (
-        "Tu es un assistant spécialisé en documentation technique.\n"
-        "Ta mission est de répondre à la question en te basant UNIQUEMENT sur les documents fournis.\n"
-        "Cite tes sources précisément."
-    ),
-    "tourisme": (
-        "Tu es un assistant spécialisé en documentation touristique.\n"
-        "Ta mission est de répondre à la question en te basant UNIQUEMENT sur les documents fournis.\n"
-        "Cite tes sources précisément."
-    )
+    "legal":     "Tu es un assistant juridique expert. Réponds en te basant UNIQUEMENT sur les documents fournis.",
+    "municipal": "Tu es un assistant spécialisé en documents administratifs municipaux. Réponds en te basant UNIQUEMENT sur les documents fournis.",
+    "medical":   "Tu es un assistant spécialisé en analyse de documents médicaux. Réponds en te basant UNIQUEMENT sur les documents fournis.",
+    "rh":        "Tu es un assistant spécialisé en ressources humaines. Réponds en te basant UNIQUEMENT sur les documents fournis.",
+    "technique": "Tu es un assistant spécialisé en documentation technique. Réponds en te basant UNIQUEMENT sur les documents fournis.",
+    "tourisme":  "Tu es un assistant spécialisé en tourisme. Réponds en te basant UNIQUEMENT sur les documents fournis.",
 }
 
 
@@ -71,7 +47,7 @@ Règles strictes :
 - Ne mélange pas plusieurs sujets dans la même réponse.
 - Si la question contient une faute de frappe, interprète-la intelligemment.
 - Ne cite jamais les sources dans ta réponse, elles sont affichées séparément.
-- Si l'information est absente des passages, réponds uniquement : "Je n'ai pas cette information veuillez me fournir plus de détails s'il vous plaît."
+- Si l'information est absente des passages, réponds uniquement : "Je n'ai pas cette information dans les documents."
 - Jamais de connaissance générale, jamais d'invention.
 
 PASSAGES :
