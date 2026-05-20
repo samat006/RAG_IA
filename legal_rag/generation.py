@@ -55,7 +55,7 @@ PASSAGES :
 
 QUESTION : {query}
 RÉPONSE (courte et directe) :"""
-#-cite toujours la source de chaque information utilisée (ex: "source: le document X...").
+#. -cite toujours la source de chaque information utilisée (ex: "source: le document X...").
 
     def stream_answer(self, query: str, results: Dict):
         """Génère la réponse token par token — même pipeline que generate_answer."""

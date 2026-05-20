@@ -90,6 +90,7 @@ EXTRACTION_PROMPTS = {
         }
     }
 
+
 class LLMMetadataExtractor:
     """
     Extraction de métadonnées par LLM local (Ollama).

@@ -50,6 +50,7 @@ class ContextualEnricher:
         return chunk_text
 
 
+
 class CorpusIndexer:
     """
     Indexation dans ChromaDB avec embeddings Ollama (nomic-embed-text).
