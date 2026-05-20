@@ -5,6 +5,7 @@ import argparse
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context, send_from_directory
 from legal_rag.pipeline import IngestionPipeline
 from legal_rag.generation import AnswerGenerator
+from legal_rag.config import MAX_DISTANCE
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model", default="phi3", help="Modèle Ollama à utiliser (ex: phi3, mistral)")
@@ -74,6 +75,8 @@ def ask():
     seen = set()
     for i, meta in enumerate(results["metadatas"][0]):
         dist = distances[i] if i < len(distances) else None
+        if dist is not None and dist > MAX_DISTANCE:
+            continue  # même filtre que _build_context
         raw = meta.get("source_file", "")
         source_type = meta.get("source_type", "")
         filename = raw.split("/")[-1].split("\\")[-1] or raw or "source"
@@ -87,10 +90,16 @@ def ask():
         seen.add(key)
         sources.append({"label": filename, "url": url, "dist": round(dist, 2) if dist is not None else None})
 
+    NO_INFO = "je n'ai pas cette information"
+
     def generate():
+        full = ""
         for token in generator.stream_answer(query, results):
+            full += token
             yield f"data: {json.dumps({'token': token})}\n\n"
-        yield f"data: {json.dumps({'done': True, 'sources': sources})}\n\n"
+        # Si le LLM dit qu'il n'a pas l'info, on masque les sources
+        show_sources = sources if NO_INFO not in full.lower() else []
+        yield f"data: {json.dumps({'done': True, 'sources': show_sources})}\n\n"
 
     return Response(stream_with_context(generate()), mimetype="text/event-stream")
 

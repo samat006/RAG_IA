@@ -70,8 +70,8 @@ Règles strictes :
 - Utilise SEULEMENT les passages qui répondent précisément à la question, ignore les autres.
 - Ne mélange pas plusieurs sujets dans la même réponse.
 - Si la question contient une faute de frappe, interprète-la intelligemment.
--tu dois absolument citer tes sources (ex: 'Source : [nom du document]') pour chaque information utilisée.
-- Si l'information est absente, réponds uniquement : "Je n'ai pas cette information veuillez me fournir plus de détails s'il vous plaît."
+- Ne cite jamais les sources dans ta réponse, elles sont affichées séparément.
+- Si l'information est absente des passages, réponds uniquement : "Je n'ai pas cette information veuillez me fournir plus de détails s'il vous plaît."
 - Jamais de connaissance générale, jamais d'invention.
 
 PASSAGES :
@@ -79,6 +79,7 @@ PASSAGES :
 
 QUESTION : {query}
 RÉPONSE (courte et directe) :"""
+#-cite toujours la source de chaque information utilisée (ex: "source: le document X...").
 
     def stream_answer(self, query: str, results: Dict):
         """Génère la réponse token par token — même pipeline que generate_answer."""

@@ -258,16 +258,13 @@ class IngestionPipeline:
         if WEB_MODE == "separate":
             return self._search_separate(query, n_results)
         else:
-            return self._search_separate(query, n_results)
+            return self._search_mixed(query, n_results)
 
     def _search_separate(self, query: str, n_results: int) -> dict:
         """
-        Mode séparé :
-        1. Cherche uniquement dans les documents locaux (source_type != web).
-        2. Si le meilleur résultat dépasse WEB_FALLBACK_THRESHOLD → bascule web.
-        3. Toujours inclure la source dans les métadonnées.
+        Cherche d'abord dans les docs locaux.
+        Si le meilleur résultat dépasse WEB_FALLBACK_THRESHOLD → bascule web.
         """
-        # Étape 1 — documents locaux uniquement
         doc_results = self.indexer.search(
             query, n_results,
             filters={"source_type": {"$in": ["pdf", "xml", "json"]}}
@@ -280,10 +277,41 @@ class IngestionPipeline:
             print(f"   📄 Réponse depuis les documents (dist={best_dist:.3f})")
             return doc_results
 
-        # Étape 2 — fallback web
         print(f"   🌐 Pas de document pertinent (dist={best_dist:.3f} > {WEB_FALLBACK_THRESHOLD}) → recherche web")
+        return self.indexer.search(query, n_results, filters={"source_type": "web"})
+
+    def _search_mixed(self, query: str, n_results: int) -> dict:
+        """
+        Cherche simultanément dans les docs locaux ET le web,
+        puis fusionne et trie par distance pour garder les n_results meilleurs.
+        """
+        doc_results = self.indexer.search(
+            query, n_results,
+            filters={"source_type": {"$in": ["pdf", "xml", "json"]}}
+        )
         web_results = self.indexer.search(
             query, n_results,
             filters={"source_type": "web"}
         )
-        return web_results
+
+        # Fusionner les deux listes
+        ids       = (doc_results.get("ids",       [[]])[0] or []) + (web_results.get("ids",       [[]])[0] or [])
+        documents = (doc_results.get("documents", [[]])[0] or []) + (web_results.get("documents", [[]])[0] or [])
+        distances = (doc_results.get("distances", [[]])[0] or []) + (web_results.get("distances", [[]])[0] or [])
+        metadatas = (doc_results.get("metadatas", [[]])[0] or []) + (web_results.get("metadatas", [[]])[0] or [])
+
+        if not ids:
+            return {"ids": [[]], "documents": [[]], "distances": [[]], "metadatas": [[]]}
+
+        # Trier par distance croissante et garder les n_results meilleurs
+        combined = sorted(zip(distances, ids, documents, metadatas), key=lambda x: x[0])
+        combined = combined[:n_results]
+
+        dists, ids_, docs, metas = zip(*combined)
+        print(f"   🔀 Mixed : {len(dists)} résultats (docs + web) — meilleur dist={dists[0]:.3f}")
+        return {
+            "ids":       [list(ids_)],
+            "documents": [list(docs)],
+            "distances": [list(dists)],
+            "metadatas": [list(metas)],
+        }

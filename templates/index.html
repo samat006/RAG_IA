@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Assistant RAG — Corte</title>
+  <title>AroBot</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -16,7 +16,7 @@
     }
 
     header {
-      background: #1e3a5f;
+      background: #f25723;
       color: white;
       padding: 16px 24px;
       display: flex;
@@ -74,7 +74,7 @@
     }
     .chip {
       background: #eef2ff;
-      color: #3730a3;
+      color: #ea5929;
       border: 1px solid #c7d2fe;
       border-radius: 20px;
       padding: 2px 10px;
@@ -133,7 +133,7 @@
     input[type="text"]:focus { border-color: #1e3a5f; }
 
     button {
-      background: #1e3a5f;
+      background: #5f3c1e;
       color: white;
       border: none;
       border-radius: 24px;
@@ -142,7 +142,7 @@
       cursor: pointer;
       transition: background 0.2s;
     }
-    button:hover    { background: #2a4f7e; }
+    button:hover    { background: #7e572a; }
     button:disabled { background: #9ca3af; cursor: not-allowed; }
   </style>
 </head>
@@ -150,7 +150,7 @@
 
 <header>
   <div>
-    <h1>🏛️ Assistant RAG — Corte</h1>
+    <h1>🏛️ AroBot</h1>
     <p>Tourisme · Hébergement · Activités</p>
   </div>
 </header>
@@ -264,10 +264,8 @@
             bubble.textContent = fullText;
             chat.scrollTop = chat.scrollHeight;
           } else if (data.error) {
-            bubble.className = "bubble warning";
-            bubble.textContent = data.error === "no_results"
-              ? "⚠️ Aucun document trouvé pour cette question."
-              : "⚠️ Les passages trouvés ne sont pas assez pertinents.";
+            bubble.className = "bubble bot";
+            bubble.textContent = "Je n'ai pas trouvé d'information correspondant à votre question. Pourriez-vous la reformuler ou préciser ce que vous recherchez ?";
           } else if (data.done) {
             // Linkifier les sources citées dans le texte de la réponse
             bubble.innerHTML = linkify(fullText, data.sources || []);

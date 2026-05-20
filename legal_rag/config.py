@@ -45,7 +45,7 @@ WEB_FALLBACK_THRESHOLD = 0.6
 
 # Seuil max de distance L2 pour les chunks envoyés au LLM.
 # 0=identique, 1.41=orthogonal — au-dessus, le chunk est ignoré.
-MAX_DISTANCE = 1.5
+MAX_DISTANCE = 0.9
 
 # Rétrocompatibilité
 USE_OCR = False
