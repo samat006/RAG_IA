@@ -42,7 +42,7 @@ GREETINGS = re.compile(
     re.IGNORECASE
 )
 
-DOCS_DIR   = os.path.abspath("./documents/test")
+
 STATIC_DIR = os.path.abspath("./static")
 
 
@@ -92,9 +92,15 @@ def test_page():
     return resp
 
 
-@app.route("/documents/<path:filename>")
-def serve_document(filename):
-    return send_from_directory(DOCS_DIR, filename)
+@app.route("/documents/<client_key>/<path:filename>")
+def serve_document(client_key, filename):
+    if client_key == "local":
+        base = os.path.abspath(LOCAL["corpus"])
+    elif client_key in CLIENTS:
+        base = os.path.abspath(CLIENTS[client_key]["corpus"])
+    else:
+        return "Client inconnu", 404
+    return send_from_directory(base, filename)
 
 
 @app.route("/ask", methods=["POST"])
@@ -148,7 +154,12 @@ def ask():
         raw = meta.get("source_file", "")
         source_type = meta.get("source_type", "")
         filename = raw.split("/")[-1].split("\\")[-1] or raw or "source"
-        url = raw if source_type == "web" else f"/documents/{filename}"
+        print(f"   🗂️  source_file={raw!r}  filename={filename!r}  type={source_type!r}")
+        if source_type == "web":
+            url = raw
+        else:
+            client_key = api_key if api_key else "local"
+            url = f"/documents/{client_key}/{filename}"
         if filename in seen:
             continue
         seen.add(filename)
