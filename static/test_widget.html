@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Test Widget AroBot</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f2f5; color: #1a1a2e;
+    }
+    nav {
+      background: #1e3a5f; color: white;
+      padding: 14px 32px; display: flex; align-items: center; gap: 24px;
+    }
+    nav span { font-weight: 700; font-size: 1.1rem; }
+    nav a { color: rgba(255,255,255,0.7); text-decoration: none; font-size: .9rem; }
+    nav a:hover { color: white; }
+
+    .hero {
+      background: linear-gradient(135deg, #f25723 0%, #c73e0e 100%);
+      color: white; text-align: center; padding: 80px 20px;
+    }
+    .hero h1 { font-size: 2.4rem; margin-bottom: 12px; }
+    .hero p  { font-size: 1.1rem; opacity: .85; }
+
+    .cards {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px; max-width: 1000px; margin: 48px auto; padding: 0 24px;
+    }
+    .card {
+      background: white; border-radius: 12px; overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .card-img {
+      height: 160px; display: flex; align-items: center; justify-content: center;
+      font-size: 4rem; background: #f5f6fa;
+    }
+    .card-body { padding: 16px; }
+    .card-body h3 { font-size: 1rem; margin-bottom: 6px; }
+    .card-body p  { font-size: .85rem; color: #555; line-height: 1.5; }
+    .tag {
+      display: inline-block; background: #fff3ee; color: #f25723;
+      border-radius: 20px; padding: 2px 10px; font-size: .75rem; margin-top: 8px;
+    }
+
+    footer {
+      text-align: center; padding: 32px; color: #888; font-size: .85rem;
+      border-top: 1px solid #e5e7eb; margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span>🏛️ Corte Tourisme</span>
+  <a href="#">Hébergements</a>
+  <a href="#">Activités</a>
+  <a href="#">Patrimoine</a>
+  <a href="#">Contact</a>
+</nav>
+
+<div class="hero">
+  <h1>Bienvenue à Corte</h1>
+  <p>Découvrez la capitale historique de la Corse — patrimoine, nature et authenticité.</p>
+</div>
+
+<div class="cards">
+  <div class="card">
+    <div class="card-img">🏨</div>
+    <div class="card-body">
+      <h3>Hôtels & Hébergements</h3>
+      <p>Trouvez l'hébergement idéal au cœur de la Corse, de l'hôtel charme au gîte de montagne.</p>
+      <span class="tag">20+ établissements</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-img">🥾</div>
+    <div class="card-body">
+      <h3>Randonnées & Nature</h3>
+      <p>GR20, Gorges de la Restonica, forêt de Vizzavona — des paysages à couper le souffle.</p>
+      <span class="tag">Sport & Nature</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-img">🏰</div>
+    <div class="card-body">
+      <h3>Patrimoine & Culture</h3>
+      <p>Citadelle de Corte, musée de la Corse, villages perchés — une histoire millénaire.</p>
+      <span class="tag">Histoire</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-img">🍽️</div>
+    <div class="card-body">
+      <h3>Gastronomie Corse</h3>
+      <p>Charcuteries, fromages, vins AOC — savourez les produits authentiques du terroir corse.</p>
+      <span class="tag">Terroir</span>
+    </div>
+  </div>
+</div>
+
+<footer>
+  © 2025 Office du Tourisme du Centre-Corse · Propulsé par AroBot IA
+</footer>
+
+<!-- Widget AroBot -->
+<script
+  src="/widget.js"
+  data-key="sk-hotel-sampiero-2026"
+  data-color="#f25723"
+  data-title="Assistant Corte">
+</script>
+
+</body>
+</html>

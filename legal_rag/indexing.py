@@ -2,7 +2,7 @@ from typing import List, Dict, Any, Optional
 import re
 import ollama
 from .models import DocumentMetadata
-from .config import chroma_client, EMBED_MODEL
+from .config import chroma_client, EMBED_MODEL, MAX_CHUNK_SIZE
 
 class ContextualEnricher:
     """Enrichissement contextuel des chunks."""
@@ -98,15 +98,21 @@ class CorpusIndexer:
 
         clean_texts = [self._clean_for_embedding(t) for t in texts]
 
-        try:
-            response = ollama.embed(model=EMBED_MODEL, input=clean_texts)
-            embeddings = response.embeddings
-            print(f"    ✅ {len(embeddings)} embeddings générés")
-            return embeddings
+        # Embed chunk par chunk pour éviter le dépassement du context length
+        embeddings = []
+        for i, text in enumerate(clean_texts):
+            # Tronquer si trop long (nomic-embed-text : ~8192 tokens ≈ 6000 chars)
+            if len(text) > MAX_CHUNK_SIZE:
+                text = text[:MAX_CHUNK_SIZE]
+            try:
+                response = ollama.embed(model=EMBED_MODEL, input=[text])
+                embeddings.append(response.embeddings[0])
+            except Exception as e:
+                print(f"    ❌ Erreur embedding chunk {i+1}: {e}")
+                raise
 
-        except Exception as e:
-            print(f"    ❌ Erreur embedding: {e}")
-            raise
+        print(f"    ✅ {len(embeddings)} embeddings générés")
+        return embeddings
     
     def index_document(
         self,

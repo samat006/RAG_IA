@@ -48,6 +48,9 @@ WEB_FALLBACK_THRESHOLD = 0.6
 # 0=identique, 1.41=orthogonal — au-dessus, le chunk est ignoré.
 MAX_DISTANCE = 0.9
 
+# Taille max d'un chunk en caractères (utilisé par chunkers + indexer)
+MAX_CHUNK_SIZE = 2000
+
 # Rétrocompatibilité
 USE_OCR = False
 

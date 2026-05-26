@@ -8,7 +8,7 @@ from .loaders import PDFLoader, XMLLoader, JSONLoader
 from .chunkers import StructuralChunker, MarkdownChunker
 from .indexing import CorpusIndexer
 from .retrieval import ParentDocumentRetriever
-from .config import DOMAIN, chroma_client, USE_OCR, PDF_MODE, WEB_SOURCES, WEB_MODE, WEB_FALLBACK_THRESHOLD, WEB_MAX_PAGES
+from .config import DOMAIN, chroma_client, USE_OCR, PDF_MODE, WEB_SOURCES, WEB_MODE, WEB_FALLBACK_THRESHOLD, WEB_MAX_PAGES, MAX_CHUNK_SIZE
 from .web_loader import WebLoader
 
 def sliding_window_splitter(text, chunk_size, overlap):
@@ -52,9 +52,9 @@ class IngestionPipeline:
 
         # Modes qui produisent du Markdown structuré → MarkdownChunker (découpe sur ##)
         if PDF_MODE in ("docling", "markdown"):
-            self.chunker = MarkdownChunker(max_chunk_size=2000, min_chunk_size=100, overlap=0)
+            self.chunker = MarkdownChunker(max_chunk_size=MAX_CHUNK_SIZE, min_chunk_size=100, overlap=0)
         else:
-            self.chunker = StructuralChunker(max_chunk_size=1500, min_chunk_size=300, overlap=400)
+            self.chunker = StructuralChunker(max_chunk_size=MAX_CHUNK_SIZE, min_chunk_size=300, overlap=400)
 
         if self.retriever_type == "parent-child":
             self.parent_retriever = ParentDocumentRetriever(
@@ -175,7 +175,7 @@ class IngestionPipeline:
         except Exception:
             return False
 
-    def ingest_corpus(self, corpus_dir: str, force: bool = False, dump_text: bool = False):
+    def ingest_corpus(self, corpus_dir: str, force: bool = False, dump_text: bool = False, web_sources: list = None):
         """Ingestion récursive. Ignorée si la collection est déjà peuplée (sauf force=True)."""
         corpus_path = Path(corpus_dir)
         if not corpus_path.exists():
@@ -227,9 +227,10 @@ class IngestionPipeline:
             except Exception as e:
                 print(f"❌ Erreur sur {f.name}: {e}")
 
-        # 2. Sources web (si configurées)
-        if WEB_SOURCES:
-            self.ingest_web_sources(WEB_SOURCES)
+        # 2. Sources web — priorité au paramètre, sinon config globale
+        sources = web_sources if web_sources is not None else WEB_SOURCES
+        if sources:
+            self.ingest_web_sources(sources)
 
     def ingest_web_sources(self, urls: list):
         """Scrape et indexe les sources web configurées dans WEB_SOURCES."""
@@ -278,7 +279,7 @@ class IngestionPipeline:
             return doc_results
 
         print(f"   🌐 Pas de document pertinent (dist={best_dist:.3f} > {WEB_FALLBACK_THRESHOLD}) → recherche web")
-        return self.indexer.search(query, n_results, filters={"source_type": "web"})
+        return self._search_mixed(query, n_results)
 
     def _search_mixed(self, query: str, n_results: int) -> dict:
         """
