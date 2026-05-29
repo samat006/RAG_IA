@@ -79,13 +79,29 @@ class CorpusIndexer:
     
     @staticmethod
     def _clean_for_embedding(text: str) -> str:
-        """Retire les balises Markdown avant embedding — améliore l'alignement sémantique."""
+        """
+        Nettoie le texte avant embedding :
+        - Retire le Markdown
+        - Supprime les articles élidés français (l', d', n'…)
+        - Normalise les accents (hôtel→hotel, hébergement→hebergement)
+        Symétrique avec pipeline._normalize_query pour que query et chunks
+        soient dans le même espace vectoriel.
+        """
+        import unicodedata
+        # 1. Markdown
         text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
         text = re.sub(r'\*{1,3}', '', text)
         text = re.sub(r'_{1,2}', '', text)
         text = re.sub(r'-{3,}', '\n', text)
         text = re.sub(r'\[.*?\]\(.*?\)', '', text)
         text = re.sub(r'\n{3,}', '\n\n', text)
+        # 2. Normalisation française (même logique que pipeline._normalize_query)
+        text = text.lower()
+        text = text.replace("’", "'").replace("‘", "'")  # apostrophes courbes → ASCII
+        text = re.sub(r"\b[ldnjmscq]'", " ", text)
+        text = unicodedata.normalize("NFD", text)
+        text = "".join(c for c in text if unicodedata.category(c) != "Mn")
+        text = re.sub(r"\s+", " ", text)
         return text.strip()
 
     def generate_embeddings(self, texts: List[str]) -> List[List[float]]:

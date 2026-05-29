@@ -1,10 +1,11 @@
 (function () {
   console.log("[AroBot] widget.js chargé ✓");
   const script  = document.currentScript || document.querySelector('script[src*="widget.js"]');
-  const API_KEY = script ? script.getAttribute("data-key")   || "" : "";
-  const COLOR   = script ? script.getAttribute("data-color") || "#f25723" : "#f25723";
-  const HOST    = script ? script.src.replace(/\/widget\.js.*$/, "") : window.location.origin;
-  const TITLE   = script ? script.getAttribute("data-title") || "Assistant" : "Assistant";
+  const API_KEY    = script ? script.getAttribute("data-key")   || "" : "";
+  const COLOR      = script ? script.getAttribute("data-color") || "#f25723" : "#f25723";
+  const HOST       = script ? script.src.replace(/\/widget\.js.*$/, "") : window.location.origin;
+  const TITLE      = script ? script.getAttribute("data-title") || "Assistant" : "Assistant";
+  const SESSION_ID = crypto.randomUUID();
 
   /* ── Styles injectés ─────────────────────────────────────────── */
   const css = `
@@ -178,7 +179,7 @@
       const res = await fetch(`${HOST}/ask`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: q, key: API_KEY })
+        body: JSON.stringify({ query: q, key: API_KEY, session_id: SESSION_ID })
       });
 
       loader.remove();

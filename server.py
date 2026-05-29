@@ -1,6 +1,7 @@
 import re
 import os
 import json
+import time
 import argparse
 import threading
 from flask import Flask, request, jsonify, render_template, Response, stream_with_context, send_from_directory
@@ -43,10 +44,44 @@ GREETINGS = re.compile(
 )
 
 
-STATIC_DIR = os.path.abspath("./static")
+STATIC_DIR   = os.path.abspath("./static")
+ADMIN_TOKEN  = os.environ.get("ADMIN_TOKEN", "change-moi")
+SESSION_TTL  = 30 * 60  # 30 min d'inactivité
 
+SESSIONS: dict = {}
+SESSIONS_LOCK = threading.Lock()
 
-ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "change-moi")
+def get_history(session_id: str) -> list:
+    with SESSIONS_LOCK:
+        s = SESSIONS.get(session_id)
+        if not s:
+            return []
+        s["last"] = time.time()
+        return list(s["history"])
+
+def save_exchange(session_id: str, user_msg: str, assistant_msg: str):
+    with SESSIONS_LOCK:
+        if session_id not in SESSIONS:
+            SESSIONS[session_id] = {"history": [], "last": time.time()}
+        h = SESSIONS[session_id]["history"]
+        h.append({"role": "user",      "content": user_msg})
+        h.append({"role": "assistant", "content": assistant_msg})
+        if len(h) > 6:
+            del h[:2]
+        SESSIONS[session_id]["last"] = time.time()
+
+def _cleanup_sessions():
+    while True:
+        time.sleep(300)
+        cutoff = time.time() - SESSION_TTL
+        with SESSIONS_LOCK:
+            expired = [sid for sid, s in SESSIONS.items() if s["last"] < cutoff]
+            for sid in expired:
+                del SESSIONS[sid]
+        if expired:
+            print(f"🧹 {len(expired)} session(s) expirée(s)")
+
+threading.Thread(target=_cleanup_sessions, daemon=True).start()
 
 
 @app.route("/")
@@ -56,24 +91,44 @@ def index():
 
 @app.route("/admin/index/<client_key>", methods=["POST"])
 def admin_index(client_key):
+    """
+    Ré-indexation d'un client ou du corpus local.
+    Body JSON :
+      { "mode": "docs"|"web"|"both",  (défaut: "both")
+        "reset": true|false }         (défaut: true)
+    """
     token = request.headers.get("X-Admin-Token", "")
     if token != ADMIN_TOKEN:
         return jsonify({"error": "Non autorisé"}), 401
 
+    body  = request.json or {}
+    mode  = body.get("mode", "both")
+    reset = body.get("reset", True)
+
+    if mode not in ("docs", "web", "both"):
+        return jsonify({"error": "mode invalide, valeurs : docs | web | both"}), 400
+
+    if client_key == "local":
+        def run():
+            LOCAL_PIPELINE.ingest_corpus(LOCAL["corpus"], force=reset,
+                                         web_sources=LOCAL.get("web_sources", []), mode=mode)
+            print(f"✅ Re-indexation locale terminée ({mode})")
+        threading.Thread(target=run, daemon=True).start()
+        return jsonify({"status": "indexation démarrée", "client": "local", "mode": mode})
+
     if client_key not in CLIENTS:
         return jsonify({"error": "Client inconnu"}), 404
 
-    cfg   = CLIENTS[client_key]
-    reset = request.json.get("reset", False) if request.json else False
+    cfg = CLIENTS[client_key]
 
     def run():
         p = IngestionPipeline(collection_name=cfg["collection"], retriever_type="recursive")
-        p.ingest_corpus(cfg["corpus"], force=reset, web_sources=cfg.get("web_sources", []))
+        p.ingest_corpus(cfg["corpus"], force=reset, web_sources=cfg.get("web_sources", []), mode=mode)
         PIPELINES[client_key] = p
-        print(f"✅ Re-indexation terminée : {cfg['name']}")
+        print(f"✅ Re-indexation terminée : {cfg['name']} ({mode})")
 
     threading.Thread(target=run, daemon=True).start()
-    return jsonify({"status": "indexation démarrée", "client": cfg["name"]})
+    return jsonify({"status": "indexation démarrée", "client": cfg["name"], "mode": mode})
 
 
 @app.route("/widget.js")
@@ -105,20 +160,21 @@ def serve_document(client_key, filename):
 
 @app.route("/ask", methods=["POST"])
 def ask():
-    data = request.json or {}
-    query = data.get("query", "").strip()
-    api_key = data.get("key", "")
+    data       = request.json or {}
+    query      = data.get("query", "").strip()
+    api_key    = data.get("key", "")
+    session_id = data.get("session_id", "")
 
     if not query:
         return jsonify({"error": "Question vide"}), 400
 
-    # Vérification clé API et sélection du bon pipeline
     if api_key and api_key not in CLIENTS:
         return jsonify({"error": "Clé API invalide"}), 403
 
-    client_name = CLIENTS[api_key]["name"] if api_key in CLIENTS else "local"
+    client_name     = CLIENTS[api_key]["name"] if api_key in CLIENTS else "local"
     active_pipeline = PIPELINES.get(api_key, LOCAL_PIPELINE)
-    print(f"📥 [{client_name}] {query}")
+    history         = get_history(session_id) if session_id else []
+    print(f"📥 [{client_name}] {query} (session={session_id[:8] if session_id else 'none'})")
 
     # Salutations
     if GREETINGS.match(query):
@@ -128,8 +184,10 @@ def ask():
             yield f"data: {json.dumps({'done': True, 'sources': []})}\n\n"
         return Response(stream_with_context(greet()), mimetype="text/event-stream")
 
-    # Retrieval
-    results = active_pipeline.search(query=query, n_results=8)
+    # Reformulation si question de suivi, puis retrieval
+    search_query = generator.rewrite_query(query, history)
+    print(f"   🔍 ChromaDB query : {search_query!r}")
+    results = active_pipeline.search(query=search_query, n_results=5)
 
     no_ids = not results or not results.get("ids") or not results["ids"][0]
     if no_ids:
@@ -169,10 +227,13 @@ def ask():
 
     def generate():
         full = ""
-        for token in generator.stream_answer(query, results):
+        for token in generator.stream_answer(query, results, history=history):
             full += token
             yield f"data: {json.dumps({'token': token})}\n\n"
         show_sources = sources if NO_INFO not in full.lower() else []
+        # Sauvegarder uniquement les échanges avec une vraie réponse
+        if session_id and show_sources:
+            save_exchange(session_id, query, full)
         yield f"data: {json.dumps({'done': True, 'sources': show_sources})}\n\n"
 
     return Response(stream_with_context(generate()), mimetype="text/event-stream")

@@ -175,62 +175,77 @@ class IngestionPipeline:
         except Exception:
             return False
 
-    def ingest_corpus(self, corpus_dir: str, force: bool = False, dump_text: bool = False, web_sources: list = None):
-        """Ingestion récursive. Ignorée si la collection est déjà peuplée (sauf force=True)."""
+    def _delete_by_type(self, source_types: list):
+        """Supprime dans ChromaDB uniquement les chunks d'un type donné (pdf, web…)."""
+        if self.retriever_type == "parent-child":
+            return  # pas supporté en mode parent-child
+        try:
+            where = {"source_type": {"$in": source_types}} if len(source_types) > 1 else {"source_type": source_types[0]}
+            self.indexer.collection.delete(where=where)
+            print(f"   ✓ Chunks supprimés (types: {source_types})")
+        except Exception as e:
+            print(f"   ⚠️ Suppression sélective échouée : {e}")
+
+    def ingest_corpus(self, corpus_dir: str, force: bool = False, dump_text: bool = False,
+                      web_sources: list = None, mode: str = "both"):
+        """
+        Ingestion du corpus.
+        mode : "docs" = PDF/XML/JSON uniquement
+               "web"  = sources web uniquement
+               "both" = tout (défaut)
+        force : supprime et ré-indexe les chunks du mode choisi.
+        """
         corpus_path = Path(corpus_dir)
         if not corpus_path.exists():
             print(f"❌ Répertoire introuvable: {corpus_dir}")
             return
 
-        if force and self._collection_has_docs():
-            print(f"\n🗑️  Reset demandé — suppression des collections existantes...")
-            for name in [
-                self.collection_name,
-                f"{self.collection_name}_children",
-                f"{self.collection_name}_parents",
-            ]:
-                try:
-                    chroma_client.delete_collection(name)
-                    print(f"   ✓ {name} supprimée")
-                except Exception:
-                    pass
-            # Recréer les indexers/retrievers après suppression
-            if self.retriever_type == "parent-child":
-                self.parent_retriever = ParentDocumentRetriever(
-                    collection_name_children=f"{self.collection_name}_children",
-                    collection_name_parents=f"{self.collection_name}_parents",
-                )
-            else:
+        if force:
+            print(f"\n🗑️  Reset ({mode}) — suppression sélective...")
+            if mode in ("docs", "both"):
+                if self.retriever_type == "parent-child":
+                    for name in [self.collection_name,
+                                  f"{self.collection_name}_children",
+                                  f"{self.collection_name}_parents"]:
+                        try: chroma_client.delete_collection(name)
+                        except Exception: pass
+                    self.parent_retriever = ParentDocumentRetriever(
+                        collection_name_children=f"{self.collection_name}_children",
+                        collection_name_parents=f"{self.collection_name}_parents",
+                    )
+                else:
+                    self._delete_by_type(["pdf", "xml", "json"])
+            if mode in ("web", "both"):
+                self._delete_by_type(["web"])
+            if mode == "both" and self.retriever_type != "parent-child":
                 self.indexer = CorpusIndexer(collection_name=self.collection_name)
 
         elif not force and self._collection_has_docs():
-            if self.retriever_type == "parent-child":
-                count = self.parent_retriever.children_collection.count()
-            else:
-                count = self.indexer.collection.count()
+            count = self.indexer.collection.count() if self.retriever_type != "parent-child" else 0
             print(f"\n✅ Collection '{self.collection_name}' déjà peuplée ({count} chunks) — ingestion ignorée.")
-            print(f"   (Relancez avec --reset pour forcer la ré-indexation)")
             return
 
-        print(f"\n🗂️  INGESTION DU CORPUS ({self.retriever_type.upper()}): {corpus_dir}")
+        print(f"\n🗂️  INGESTION ({mode.upper()}) : {corpus_dir}")
 
         # 1. Documents locaux (PDF, XML, JSON)
-        files = list(corpus_path.glob("**/*.*"))
-        for f in files:
-            try:
-                if f.suffix == '.pdf':
-                    self.ingest_document(str(f), 'pdf', dump_text=dump_text)
-                elif f.suffix == '.xml':
-                    self.ingest_document(str(f), 'xml', dump_text=dump_text)
-                elif f.suffix == '.json':
-                    self.ingest_document(str(f), 'json', dump_text=dump_text)
-            except Exception as e:
-                print(f"❌ Erreur sur {f.name}: {e}")
+        if mode in ("docs", "both"):
+            files = list(corpus_path.glob("**/*.*"))
+            for f in files:
+                try:
+                    if f.suffix == '.pdf':
+                        self.ingest_document(str(f), 'pdf', dump_text=dump_text)
+                    elif f.suffix == '.xml':
+                        self.ingest_document(str(f), 'xml', dump_text=dump_text)
+                    elif f.suffix == '.json':
+                        self.ingest_document(str(f), 'json', dump_text=dump_text)
+                except Exception as e:
+                    print(f"❌ Erreur sur {f.name}: {e}")
 
-        # 2. Sources web — priorité au paramètre, sinon config globale
-        sources = web_sources if web_sources is not None else WEB_SOURCES
-        if sources:
-            self.ingest_web_sources(sources)
+        # 2. Sources web
+        if mode in ("web", "both"):
+            sources = web_sources if web_sources is not None else WEB_SOURCES
+            if sources:
+                self.ingest_web_sources(sources)
 
     def ingest_web_sources(self, urls: list):
         """Scrape et indexe les sources web configurées dans WEB_SOURCES."""
@@ -245,6 +260,24 @@ class IngestionPipeline:
                 if self.retriever_type != "parent-child":
                     self.indexer.index_document(chunks, enrich=False)
 
+    @staticmethod
+    def _normalize_query(query: str) -> str:
+        """
+        Normalise la query avant embedding :
+        - Supprime les articles élidés français (l', d', n'…)
+        - Supprime les accents (hôtel → hotel)
+        - Minuscules + strip ponctuation finale
+        Améliore la correspondance sémantique pour les questions formelles en français.
+        """
+        import unicodedata, re as _re
+        q = query.lower()
+        q = q.replace("’", "'").replace("‘", "'")  # apostrophes courbes → ASCII
+        q = _re.sub(r"\b[ldnjmscq]'", " ", q)   # l'hôtel → hotel, d'une → une
+        q = unicodedata.normalize("NFD", q)
+        q = "".join(c for c in q if unicodedata.category(c) != "Mn")  # ô→o, é→e
+        q = _re.sub(r"\s+", " ", q).strip().rstrip("?!.,;:")
+        return q
+
     def search(self, query: str, n_results: int = 5, filters: Optional[Dict] = None):
         """
         Recherche selon WEB_MODE :
@@ -253,6 +286,7 @@ class IngestionPipeline:
         - "mixed"    : fusionne directement les résultats docs + web.
         Cite toujours la source dans les métadonnées.
         """
+        query = self._normalize_query(query)
         if self.retriever_type == "parent-child":
             return self.parent_retriever.retrieve_with_parent(query, n_results)
 

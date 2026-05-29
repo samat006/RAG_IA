@@ -42,7 +42,7 @@ class AnswerGenerator:
         return f"""{self.system_intro}
 
 Règles strictes :
-- Réponds UNIQUEMENT à ce qui est demandé, de façon courte et directe.
+- Réponds UNIQUEMENT à ce qui est demandé, de façon courte et directe n'invate jamais jamais.
 - Utilise SEULEMENT les passages qui répondent précisément à la question, ignore les autres.
 - Ne mélange pas plusieurs sujets dans la même réponse.
 - Si la question contient une faute de frappe, interprète-la intelligemment.
@@ -57,29 +57,58 @@ QUESTION : {query}
 RÉPONSE (courte et directe) :"""
 #. -cite toujours la source de chaque information utilisée (ex: "source: le document X...").
 
-    def stream_answer(self, query: str, results: Dict):
-        """Génère la réponse token par token — même pipeline que generate_answer."""
+    REWRITE_MODEL = "phi3"
+
+    def rewrite_query(self, query: str, history: list) -> str:
+        """Reformule la question en autonome en intégrant l'historique de conversation."""
+        if not history:
+            return query
+        last = "\n".join(f"{m['role'].capitalize()} : {m['content']}" for m in history[-4:])
+        prompt = (
+            "Reformule la question en une question autonome et complète "
+            "en intégrant le contexte. Réponds UNIQUEMENT avec la question reformulée, rien d'autre.\n\n"
+            f"Conversation :\n{last}\n\nQuestion : {query}\nQuestion reformulée :"
+        )
+        try:
+            resp = ollama.chat(
+                model=self.REWRITE_MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                options={"temperature": 0.0, "num_predict": 60}
+            )
+            rewritten = resp.message.content.strip().split("\n")[0].strip().strip('"').strip("'")
+            print(f"   ✏️  Reformulée : {rewritten!r}")
+            return rewritten if rewritten else query
+        except Exception as e:
+            print(f"   ⚠️  Rewrite échoué : {e}")
+            return query
+
+    def stream_answer(self, query: str, results: Dict, history: list = None):
+        """Génère la réponse token par token avec historique de conversation optionnel."""
         prompt = self.build_prompt(query, results)
         if not prompt:
             return
-        stream = ollama.chat(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-            stream=True,
-            options={"temperature": 0.0}
-        )
+        messages = [{"role": "system", "content": self.system_intro}]
+        for msg in (history or []):
+            messages.append({"role": msg["role"], "content": msg["content"]})
+        messages.append({"role": "user", "content": prompt})
+        stream = ollama.chat(model=self.model, messages=messages, stream=True, options={"temperature": 0.0})
         for chunk in stream:
             token = chunk.message.content
             if token:
                 yield token
 
-    def generate_answer(self, query: str, results: Dict) -> str:
+    def generate_answer(self, query: str, results: Dict, history: list = None) -> str:
         print(f"\n📝 Génération [{self.domain.upper()}] : '{query}'")
         prompt = self.build_prompt(query, results)
         if not prompt:
             return "Je n'ai trouvé aucun passage pertinent dans les documents pour répondre à cette question."
         try:
-            return self._generate_ollama(prompt)
+            messages = [{"role": "system", "content": self.system_intro}]
+            for msg in (history or []):
+                messages.append({"role": msg["role"], "content": msg["content"]})
+            messages.append({"role": "user", "content": prompt})
+            response = ollama.chat(model=self.model, messages=messages, options={"temperature": 0.0})
+            return response.message.content
         except Exception as e:
             return f"❌ Erreur lors de la génération: {e}"
 
