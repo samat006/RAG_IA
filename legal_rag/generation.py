@@ -65,8 +65,15 @@ RÉPONSE (courte et directe) :"""
             return query
         last = "\n".join(f"{m['role'].capitalize()} : {m['content']}" for m in history[-4:])
         prompt = (
-            "Reformule la question en une question autonome et complète "
-            "en intégrant le contexte. Réponds UNIQUEMENT avec la question reformulée, rien d'autre.\n\n"
+            "Tu es un assistant qui reformule des questions de suivi en questions autonomes.\n"
+            "RÈGLES STRICTES :\n"
+            "- Si la question porte sur un sujet DIFFÉRENT de la conversation (changement de thème), "
+            "retourne la question TELLE QUELLE sans modification.\n"
+            "- Reformule UNIQUEMENT si la question est une suite directe du même sujet "
+            "(ex: 'et lui ?', 'combien ?', 'pourquoi ?' en référence à ce qui précède).\n"
+            "- Ne mélange JAMAIS des entités, noms ou sujets de l'historique dans la nouvelle question "
+            "si elle porte sur un autre sujet.\n"
+            "- Réponds UNIQUEMENT avec la question (reformulée ou originale), rien d'autre.\n\n"
             f"Conversation :\n{last}\n\nQuestion : {query}\nQuestion reformulée :"
         )
         try:
