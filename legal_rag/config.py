@@ -37,7 +37,7 @@ WEB_MAX_PAGES = None
 #              si rien de pertinent → cherche sur le web.
 #              Cite toujours la source. Refuse de répondre sans source.
 # "mixed"    : fusionne les résultats documents + web avant de répondre.
-WEB_MODE = "mixed"
+WEB_MODE = "separate"
 
 # Seuil de distance en dessous duquel on considère qu'un document répond
 # (mode "separate"). Si tous les résultats sont au-dessus → bascule sur le web.

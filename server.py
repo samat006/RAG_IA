@@ -187,7 +187,7 @@ def ask():
     # Reformulation si question de suivi, puis retrieval
     search_query = generator.rewrite_query(query, history)
     print(f"   🔍 ChromaDB query : {search_query!r}")
-    results = active_pipeline.search(query=search_query, n_results=5)
+    results = active_pipeline.search(query=search_query, n_results=12)
 
     no_ids = not results or not results.get("ids") or not results["ids"][0]
     if no_ids:
