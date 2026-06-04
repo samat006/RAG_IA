@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rapport d'évaluation – Système RAG</title>
+  <style>
+    /* ══ Général ══════════════════════════════════════════════════ */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Georgia", "Times New Roman", serif;
+      background: #f4f4f4;
+      color: #1a1a1a;
+    }
+
+    /* ══ Page (visible à l'écran) ════════════════════════════════ */
+    .page {
+      max-width: 1100px;
+      margin: 32px auto;
+      background: white;
+      padding: 48px 56px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+      border-radius: 4px;
+    }
+
+    /* ══ En-tête rapport ════════════════════════════════════════  */
+    .report-header {
+      border-bottom: 2px solid #1e3a5f;
+      padding-bottom: 20px;
+      margin-bottom: 28px;
+    }
+    .report-header .university {
+      font-size: 0.82rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+    .report-header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #1e3a5f;
+      margin-bottom: 4px;
+    }
+    .report-header .subtitle {
+      font-size: 0.95rem;
+      color: #374151;
+      margin-bottom: 14px;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+    .meta-grid span { color: #6b7280; }
+    .meta-grid strong { color: #1f2937; }
+
+    /* ══ Sections ════════════════════════════════════════════════ */
+    .section { margin-bottom: 32px; }
+    .section h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1e3a5f;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-left: 3px solid #f25723;
+      padding-left: 10px;
+      margin-bottom: 14px;
+    }
+    .section p {
+      font-size: 0.88rem;
+      line-height: 1.7;
+      color: #374151;
+    }
+
+    /* ══ Tableau de paramètres testés ══════════════════════════  */
+    .params-ref table {
+      border-collapse: collapse;
+      font-size: 0.83rem;
+      width: auto;
+    }
+    .params-ref th, .params-ref td {
+      border: 1px solid #d1d5db;
+      padding: 6px 14px;
+      text-align: left;
+    }
+    .params-ref th {
+      background: #1e3a5f;
+      color: white;
+      font-weight: 600;
+    }
+    .params-ref tr:nth-child(even) td { background: #f8fafc; }
+
+    /* ══ Tableau principal d'évaluation ════════════════════════  */
+    .eval-table-wrap { overflow-x: auto; }
+    table.eval {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+      font-family: "Arial", sans-serif;
+    }
+    table.eval thead tr {
+      background: #1e3a5f;
+      color: white;
+    }
+    table.eval th {
+      padding: 9px 10px;
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+      vertical-align: bottom;
+    }
+    table.eval td {
+      padding: 8px 10px;
+      border: 1px solid #d1d5db;
+      vertical-align: top;
+    }
+    table.eval tr:nth-child(even) td { background: #f9fafb; }
+    table.eval tr:hover td { background: #eff6ff; }
+
+    /* Colonnes fixes */
+    .c-num   { width: 32px; text-align: center; color: #9ca3af; }
+    .c-q     { min-width: 160px; max-width: 240px; }
+    .c-param { width: 52px; text-align: center; }
+    .c-ans   { min-width: 200px; }
+    .c-src   { width: 110px; }
+    .c-eval  { width: 130px; text-align: center; }
+    .c-notes { min-width: 130px; }
+
+    /* Réponse tronquée */
+    .answer-cell {
+      max-height: 70px;
+      overflow: hidden;
+      line-height: 1.4;
+      font-size: 0.8rem;
+      color: #374151;
+      cursor: pointer;
+      transition: max-height 0.2s;
+    }
+    .answer-cell.expanded { max-height: none; }
+    .expand-hint {
+      font-size: 0.72rem;
+      color: #6b7280;
+      cursor: pointer;
+      display: block;
+      margin-top: 2px;
+    }
+
+    /* Sources */
+    .src-list { font-size: 0.75rem; color: #166534; }
+
+    /* Évaluation radio-style */
+    .eval-cell { display: flex; flex-direction: column; gap: 4px; align-items: center; }
+    .eval-opt {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      padding: 3px 8px;
+      border-radius: 4px;
+      transition: background 0.15s;
+      width: 100%;
+      justify-content: center;
+    }
+    .eval-opt:hover { background: #f3f4f6; }
+    input[type="radio"] { accent-color: #1e3a5f; }
+    .label-bon  { color: #166534; font-weight: 600; }
+    .label-nok  { color: #b91c1c; font-weight: 600; }
+
+    /* Notes éditables */
+    .notes-cell {
+      font-size: 0.78rem;
+      color: #374151;
+      min-height: 28px;
+      outline: none;
+      border-radius: 3px;
+      padding: 2px 4px;
+    }
+    .notes-cell:focus { background: #fefce8; border: 1px dashed #fbbf24; }
+    .notes-cell:empty:before {
+      content: "Ajouter une note…";
+      color: #d1d5db;
+    }
+
+    /* Statut de la ligne */
+    td.status-bon  { border-left: 3px solid #16a34a; }
+    td.status-nok  { border-left: 3px solid #e11d48; }
+
+    /* ══ Barre de saisie (non imprimée) ═════════════════════════ */
+    .input-bar {
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+    .ifield { display: flex; flex-direction: column; gap: 3px; }
+    .ifield label { font-size: 0.75rem; font-weight: 600; color: #6b7280; font-family: Arial, sans-serif; }
+    .ifield input, .ifield select {
+      padding: 6px 10px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      outline: none;
+      font-family: Arial, sans-serif;
+    }
+    .ifield input:focus, .ifield select:focus { border-color: #1e3a5f; }
+    .ifield.query-f { flex: 1; min-width: 220px; }
+    .ifield.query-f textarea {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      resize: vertical;
+      min-height: 54px;
+      outline: none;
+      font-family: Arial, sans-serif;
+    }
+    .ifield.query-f textarea:focus { border-color: #1e3a5f; }
+    .btn-add {
+      background: #1e3a5f;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 18px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: Arial, sans-serif;
+      height: 36px;
+      align-self: flex-end;
+      white-space: nowrap;
+    }
+    .btn-add:hover { background: #2d5282; }
+    .btn-add:disabled { background: #9ca3af; }
+    .spinner-sm {
+      display: none;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-left: 6px;
+    }
+    .spinner-sm.on { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ══ Boutons d'action ════════════════════════════════════════ */
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .btn-action {
+      padding: 7px 16px;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      font-family: Arial, sans-serif;
+      transition: background 0.15s;
+    }
+    .btn-print   { background: #f25723; color: white; }
+    .btn-print:hover { background: #d94b1a; }
+    .btn-csv     { background: #166534; color: white; }
+    .btn-csv:hover { background: #14532d; }
+    .btn-reset   { background: #fee2e2; color: #b91c1c; }
+    .btn-reset:hover { background: #fecaca; }
+
+    /* ══ Résumé statistique ══════════════════════════════════════ */
+    .summary-grid {
+      display: flex;
+      gap: 20px;
+      font-family: Arial, sans-serif;
+      flex-wrap: wrap;
+    }
+    .stat-box {
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px 20px;
+      text-align: center;
+      min-width: 100px;
+    }
+    .stat-box .val {
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+    .stat-box .lbl { font-size: 0.75rem; color: #6b7280; margin-top: 2px; }
+    .stat-bon .val { color: #16a34a; }
+    .stat-nok .val { color: #e11d48; }
+    .stat-total .val { color: #1e3a5f; }
+
+    /* ══ Pied de page ════════════════════════════════════════════ */
+    .report-footer {
+      margin-top: 40px;
+      padding-top: 16px;
+      border-top: 1px solid #e5e7eb;
+      font-size: 0.78rem;
+      color: #9ca3af;
+      text-align: center;
+      font-family: Arial, sans-serif;
+    }
+
+    /* ══ Impression ══════════════════════════════════════════════ */
+    @media print {
+      body { background: white; font-size: 10pt; }
+      .page { box-shadow: none; margin: 0; padding: 20mm 18mm; max-width: none; border-radius: 0; }
+      .no-print { display: none !important; }
+      .input-bar { display: none !important; }
+      .actions { display: none !important; }
+      .answer-cell { max-height: none !important; }
+      .expand-hint { display: none; }
+      .notes-cell:empty:before { display: none; }
+      table.eval { font-size: 8pt; }
+      table.eval td, table.eval th { padding: 5px 7px; }
+      tr { page-break-inside: avoid; }
+      .report-header { border-bottom: 1pt solid #1e3a5f; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── En-tête ───────────────────────────────────────────────── -->
+  <div class="report-header">
+    <div class="university">Master 2 — Travaux Pratiques RAG</div>
+    <h1>Rapport d'évaluation — Système RAG</h1>
+    <div class="subtitle">Analyse comparative des configurations de pipeline de Retrieval-Augmented Generation</div>
+    <div class="meta-grid">
+      <div><span>Auteur : </span><strong id="meta-author" contenteditable="true" class="no-print-edit">Votre nom</strong></div>
+      <div><span>Date : </span><strong id="meta-date"></strong></div>
+      <div><span>Modèle de base : </span><strong>Ollama / Mistral</strong></div>
+      <div><span>Corpus : </span><strong>Tourisme – Centre Corse</strong></div>
+    </div>
+  </div>
+
+  <!-- ── Méthodologie ───────────────────────────────────────────── -->
+  <div class="section">
+    <h2>Méthodologie</h2>
+    <p>
+      Chaque configuration est évaluée en posant la même question (ou des questions représentatives) avec des paramètres
+      différents. Pour chaque résultat, une évaluation qualitative manuelle est effectuée :
+      <strong>Bon</strong> si la réponse est pertinente, complète et bien sourcée ;
+      <strong>Pas satisfait</strong> si la réponse est hors-sujet, incomplète ou sans source valide.
+    </p>
+  </div>
+
+  <!-- ── Tableau de référence des paramètres ─────────────────────── -->
+  <div class="section params-ref">
+    <h2>Configurations testées</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Paramètre</th>
+          <th>Valeurs testées</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><code>n_results</code></td><td>4 · 8 · 12</td><td>Nombre de chunks récupérés depuis ChromaDB</td></tr>
+        <tr><td><code>max_distance</code></td><td>0.6 · 0.9 · 1.2</td><td>Seuil L2 de pertinence (plus bas = plus strict)</td></tr>
+        <tr><td><code>model</code></td><td>mistral · llama3</td><td>LLM de génération via Ollama</td></tr>
+        <tr><td><code>retriever_type</code></td><td>recursive · parent-child</td><td>Stratégie de découpage / retrieval</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Résumé statistique ─────────────────────────────────────── -->
+  <div class="section">
+    <h2>Résumé</h2>
+    <div class="summary-grid">
+      <div class="stat-box stat-total">
+        <div class="val" id="s-total">0</div>
+        <div class="lbl">Total</div>
+      </div>
+      <div class="stat-box stat-bon">
+        <div class="val" id="s-bon">0</div>
+        <div class="lbl">Bon</div>
+      </div>
+      <div class="stat-box stat-nok">
+        <div class="val" id="s-nok">0</div>
+        <div class="lbl">Pas satisfait</div>
+      </div>
+      <div class="stat-box">
+        <div class="val" id="s-pct" style="color:#1e3a5f">—</div>
+        <div class="lbl">Taux satisfaction</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tableau principal ──────────────────────────────────────── -->
+  <div class="section">
+    <h2>Résultats d'évaluation</h2>
+
+    <!-- Barre d'ajout (non imprimée) -->
+    <div class="input-bar no-print">
+      <div class="ifield">
+        <label>n_results</label>
+        <input type="number" id="f-nr" value="8" min="1" max="30" style="width:70px"/>
+      </div>
+      <div class="ifield">
+        <label>max_distance</label>
+        <input type="number" id="f-md" value="0.9" min="0.1" max="2.0" step="0.05" style="width:80px"/>
+      </div>
+      <div class="ifield">
+        <label>Modèle</label>
+        <select id="f-model" style="width:100px">
+          <option>mistral</option>
+          <option>llama3</option>
+          <option>phi3</option>
+          <option>gemma</option>
+        </select>
+      </div>
+      <div class="ifield">
+        <label>Retriever</label>
+        <select id="f-ret" style="width:120px">
+          <option value="recursive">recursive</option>
+          <option value="parent-child">parent-child</option>
+        </select>
+      </div>
+      <div class="ifield query-f">
+        <label>Question</label>
+        <textarea id="f-query" placeholder="Entrez votre question…"></textarea>
+      </div>
+      <button class="btn-add" id="btn-add" onclick="addRow()">
+        + Ajouter <span class="spinner-sm" id="sp"></span>
+      </button>
+    </div>
+
+    <!-- Boutons action -->
+    <div class="actions no-print">
+      <button class="btn-action btn-print" onclick="window.print()">Imprimer / PDF</button>
+      <button class="btn-action btn-csv"   onclick="exportCSV()">Exporter CSV</button>
+      <button class="btn-action btn-reset" onclick="resetTable()">Réinitialiser</button>
+    </div>
+
+    <div class="eval-table-wrap">
+      <table class="eval" id="eval-table">
+        <thead>
+          <tr>
+            <th class="c-num">#</th>
+            <th class="c-q">Question</th>
+            <th class="c-param" title="n_results">n_r</th>
+            <th class="c-param" title="max_distance">dist</th>
+            <th class="c-param" title="Modèle">LLM</th>
+            <th class="c-param" title="Retriever">Ret.</th>
+            <th class="c-ans">Réponse obtenue</th>
+            <th class="c-src">Sources</th>
+            <th class="c-eval">Évaluation</th>
+            <th class="c-notes">Notes</th>
+          </tr>
+        </thead>
+        <tbody id="eval-tbody">
+          <!-- Lignes ajoutées dynamiquement -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── Observations ─────────────────────────────────────────────── -->
+  <div class="section">
+    <h2>Observations et analyse</h2>
+    <p contenteditable="true" class="no-print-edit" style="min-height:80px; padding:8px; border:1px dashed #d1d5db; border-radius:4px; font-size:0.88rem; line-height:1.7;">
+      Cliquez ici pour saisir vos observations et analyse des résultats…
+    </p>
+  </div>
+
+  <!-- ── Conclusion ──────────────────────────────────────────────── -->
+  <div class="section">
+    <h2>Conclusion</h2>
+    <p contenteditable="true" class="no-print-edit" style="min-height:60px; padding:8px; border:1px dashed #d1d5db; border-radius:4px; font-size:0.88rem; line-height:1.7;">
+      Cliquez ici pour saisir votre conclusion…
+    </p>
+  </div>
+
+  <!-- ── Pied de page ──────────────────────────────────────────── -->
+  <div class="report-footer">
+    Généré avec le système AroBot RAG · <span id="footer-date"></span>
+  </div>
+</div>
+
+<script>
+  // ── Init ─────────────────────────────────────────────────────
+  const now = new Date();
+  document.getElementById("meta-date").textContent = now.toLocaleDateString("fr-FR",
+    { year:"numeric", month:"long", day:"numeric" });
+  document.getElementById("footer-date").textContent = now.toLocaleString("fr-FR");
+
+  let rows = JSON.parse(localStorage.getItem("rag_rapport_rows") || "[]");
+  let rowCounter = rows.length ? Math.max(...rows.map(r=>r.num)) : 0;
+
+  renderRows();
+
+  document.getElementById("f-query").addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addRow(); }
+  });
+
+  // ── Ajouter une ligne (avec appel serveur si disponible) ──────
+  async function addRow() {
+    const query = document.getElementById("f-query").value.trim();
+    if (!query) { alert("Entrez une question."); return; }
+
+    const params = {
+      n_results:      parseInt(document.getElementById("f-nr").value, 10),
+      max_distance:   parseFloat(document.getElementById("f-md").value),
+      model:          document.getElementById("f-model").value,
+      retriever_type: document.getElementById("f-ret").value
+    };
+
+    const btn = document.getElementById("btn-add");
+    const sp  = document.getElementById("sp");
+    btn.disabled = true;
+    sp.classList.add("on");
+
+    let answer = "(réponse manuelle)", sources = [];
+
+    try {
+      const res = await fetch("/eval/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, ...params })
+      });
+      if (res.ok) {
+        const d = await res.json();
+        answer  = d.answer  || answer;
+        sources = d.sources || [];
+      }
+    } catch { /* serveur absent – saisie manuelle */ }
+
+    rowCounter++;
+    const row = {
+      num: rowCounter,
+      ts: new Date().toLocaleString("fr-FR"),
+      query, params, answer, sources,
+      rating: null,
+      notes: ""
+    };
+    rows.push(row);
+    saveRows();
+    renderRows();
+
+    document.getElementById("f-query").value = "";
+    btn.disabled = false;
+    sp.classList.remove("on");
+  }
+
+  // ── Notation ─────────────────────────────────────────────────
+  function setRating(num, value) {
+    const row = rows.find(r => r.num === num);
+    if (!row) return;
+    row.rating = value;
+    saveRows();
+    renderRows();
+  }
+
+  // ── Sauvegarde des notes éditables ───────────────────────────
+  function saveNote(num, el) {
+    const row = rows.find(r => r.num === num);
+    if (row) { row.notes = el.innerText.trim(); saveRows(); }
+  }
+
+  // ── Rendu du tableau ─────────────────────────────────────────
+  function renderRows() {
+    const tbody = document.getElementById("eval-tbody");
+
+    // Stats
+    const bon  = rows.filter(r => r.rating === "bon").length;
+    const nok  = rows.filter(r => r.rating === "pas_satisfait").length;
+    document.getElementById("s-total").textContent = rows.length;
+    document.getElementById("s-bon").textContent   = bon;
+    document.getElementById("s-nok").textContent   = nok;
+    const rated = bon + nok;
+    document.getElementById("s-pct").textContent =
+      rated > 0 ? Math.round(bon / rated * 100) + "%" : "—";
+
+    if (rows.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:#9ca3af;padding:32px;font-family:Arial,sans-serif;font-size:0.85rem;">
+        Aucune entrée. Utilisez le formulaire ci-dessus pour ajouter des résultats.
+      </td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows.map(row => {
+      const p = row.params;
+      const bonChecked = row.rating === "bon"           ? "checked" : "";
+      const nokChecked = row.rating === "pas_satisfait" ? "checked" : "";
+      const statusClass = row.rating === "bon" ? "status-bon"
+                        : row.rating === "pas_satisfait" ? "status-nok" : "";
+
+      const srcList = (row.sources || []).slice(0, 3)
+        .map(s => `<div><a href="${s.url}" target="_blank" style="color:#166534;font-size:.75rem">${s.label}${s.dist !== null ? ' ('+s.dist+')' : ''}</a></div>`)
+        .join("") || '<span style="color:#9ca3af">—</span>';
+
+      return `<tr>
+        <td class="c-num ${statusClass}">${row.num}</td>
+        <td class="c-q" style="font-size:.8rem">${esc(row.query)}</td>
+        <td class="c-param">${p.n_results}</td>
+        <td class="c-param">${p.max_distance}</td>
+        <td class="c-param" style="font-size:.75rem">${p.model}</td>
+        <td class="c-param" style="font-size:.72rem">${p.retriever_type === "parent-child" ? "P-C" : "rec"}</td>
+        <td class="c-ans">
+          <div class="answer-cell" id="ans-${row.num}" onclick="toggleAns(${row.num})">${esc(row.answer)}</div>
+          <span class="expand-hint no-print" onclick="toggleAns(${row.num})">▼ développer</span>
+        </td>
+        <td class="c-src"><div class="src-list">${srcList}</div></td>
+        <td class="c-eval">
+          <div class="eval-cell">
+            <label class="eval-opt">
+              <input type="radio" name="rate-${row.num}" value="bon" ${bonChecked}
+                     onchange="setRating(${row.num},'bon')">
+              <span class="label-bon">Bon</span>
+            </label>
+            <label class="eval-opt">
+              <input type="radio" name="rate-${row.num}" value="pas_satisfait" ${nokChecked}
+                     onchange="setRating(${row.num},'pas_satisfait')">
+              <span class="label-nok">Pas satisfait</span>
+            </label>
+          </div>
+        </td>
+        <td class="c-notes">
+          <div class="notes-cell" contenteditable="true"
+               onblur="saveNote(${row.num},this)">${esc(row.notes)}</div>
+        </td>
+      </tr>`;
+    }).join("");
+  }
+
+  // ── Expand réponse ────────────────────────────────────────────
+  function toggleAns(num) {
+    const el = document.getElementById("ans-" + num);
+    if (el) el.classList.toggle("expanded");
+  }
+
+  // ── Utilitaires ───────────────────────────────────────────────
+  function esc(s) {
+    return String(s || "")
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/\n/g,"<br>");
+  }
+  function saveRows() {
+    localStorage.setItem("rag_rapport_rows", JSON.stringify(rows));
+  }
+  function resetTable() {
+    if (!confirm("Réinitialiser tout le tableau ? Cette action est irréversible.")) return;
+    rows = []; rowCounter = 0; saveRows(); renderRows();
+  }
+
+  // ── Export CSV ────────────────────────────────────────────────
+  function exportCSV() {
+    if (!rows.length) { alert("Tableau vide."); return; }
+    const header = ["#","horodatage","question","n_results","max_distance","model","retriever","reponse","sources","evaluation","notes"];
+    const data = rows.map(r => [
+      r.num, r.ts, r.query,
+      r.params.n_results, r.params.max_distance, r.params.model, r.params.retriever_type,
+      r.answer,
+      (r.sources||[]).map(s=>s.label).join("|"),
+      r.rating || "",
+      r.notes || ""
+    ].map(v => '"' + String(v).replace(/"/g,'""') + '"').join(","));
+    const csv = [header.join(","), ...data].join("\n");
+    const blob = new Blob(["﻿"+csv], { type:"text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "rapport_eval_rag.csv";
+    a.click(); URL.revokeObjectURL(url);
+  }
+</script>
+</body>
+</html>

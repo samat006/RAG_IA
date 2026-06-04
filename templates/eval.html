@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Évaluation RAG</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+    }
+    header {
+      background: #1e3a5f;
+      color: white;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    header h1 { font-size: 1.1rem; font-weight: 600; }
+    header a { color: #93c5fd; font-size: 0.85rem; text-decoration: none; }
+    header a:hover { text-decoration: underline; }
+
+    .container { max-width: 1400px; margin: 0 auto; padding: 24px 16px; }
+
+    /* ── Panneau de paramètres ── */
+    .params-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      margin-bottom: 24px;
+    }
+    .params-card h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .params-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .param-field label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+    .param-field input,
+    .param-field select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .param-field input:focus,
+    .param-field select:focus { border-color: #1e3a5f; }
+
+    .query-row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    .query-row .param-field { flex: 1; }
+    .query-row .param-field textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+      resize: vertical;
+      min-height: 60px;
+      transition: border-color 0.2s;
+    }
+    .query-row .param-field textarea:focus { border-color: #1e3a5f; }
+    .btn-run {
+      background: #f25723;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 24px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+      height: 44px;
+      align-self: flex-end;
+    }
+    .btn-run:hover { background: #d94b1a; }
+    .btn-run:disabled { background: #9ca3af; cursor: not-allowed; }
+
+    /* ── Barre d'actions cache ── */
+    .cache-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .cache-header h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #374151;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .cache-actions { display: flex; gap: 8px; }
+    .btn-sm {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background 0.2s;
+    }
+    .btn-export { background: #1e3a5f; color: white; }
+    .btn-export:hover { background: #2d5282; }
+    .btn-clear { background: #fee2e2; color: #b91c1c; }
+    .btn-clear:hover { background: #fecaca; }
+
+    /* ── Tableau ── */
+    .table-wrap {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    thead tr {
+      background: #f8fafc;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    th {
+      padding: 12px 14px;
+      text-align: left;
+      font-weight: 600;
+      color: #374151;
+      white-space: nowrap;
+    }
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: top;
+      color: #1f2937;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f9fafb; }
+
+    /* Colonnes */
+    .col-ts   { width: 120px; color: #6b7280; font-size: 0.78rem; }
+    .col-q    { min-width: 180px; max-width: 260px; }
+    .col-params { width: 160px; }
+    .col-ans  { min-width: 220px; }
+    .col-src  { width: 150px; }
+    .col-rate { width: 180px; text-align: center; }
+
+    .answer-text {
+      max-height: 80px;
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+      line-height: 1.45;
+    }
+    .answer-text.expanded { max-height: none; }
+    .answer-text::after {
+      content: "▼ voir plus";
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      background: linear-gradient(transparent, white 60%);
+      padding-top: 20px;
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+    .answer-text.expanded::after { display: none; }
+
+    .param-tag {
+      display: inline-block;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.75rem;
+      margin: 1px 2px 1px 0;
+      white-space: nowrap;
+    }
+    .src-chip {
+      display: inline-block;
+      background: #f0fdf4;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.75rem;
+      margin: 1px 2px 1px 0;
+      max-width: 130px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .src-chip a { color: inherit; text-decoration: none; }
+    .src-chip a:hover { text-decoration: underline; }
+
+    /* Boutons de notation */
+    .rate-btns { display: flex; gap: 8px; justify-content: center; }
+    .btn-rate {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .btn-bon {
+      background: #f0fdf4;
+      color: #166534;
+      border-color: #86efac;
+    }
+    .btn-bon:hover,
+    .btn-bon.active {
+      background: #16a34a;
+      color: white;
+      border-color: #16a34a;
+    }
+    .btn-nok {
+      background: #fff1f2;
+      color: #9f1239;
+      border-color: #fda4af;
+    }
+    .btn-nok:hover,
+    .btn-nok.active {
+      background: #e11d48;
+      color: white;
+      border-color: #e11d48;
+    }
+    .rating-saved {
+      font-size: 0.78rem;
+      color: #6b7280;
+      margin-top: 4px;
+      text-align: center;
+    }
+
+    /* Loading spinner */
+    .spinner {
+      display: none;
+      width: 18px; height: 18px;
+      border: 2px solid #e5e7eb;
+      border-top-color: #1e3a5f;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .spinner.visible { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: #9ca3af;
+    }
+    .empty-state p { font-size: 0.9rem; margin-top: 8px; }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 10px;
+      font-size: 0.82rem;
+      color: #6b7280;
+    }
+    .stats-bar strong { color: #1f2937; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Évaluation RAG — Cache de résultats</h1>
+  <a href="/">← Retour au chat</a>
+</header>
+
+<div class="container">
+
+  <!-- Panneau paramètres -->
+  <div class="params-card">
+    <h2>Paramètres de requête</h2>
+    <div class="params-grid">
+      <div class="param-field">
+        <label>n_results (chunks récupérés)</label>
+        <input type="number" id="p-nresults" value="8" min="1" max="30" />
+      </div>
+      <div class="param-field">
+        <label>max_distance (seuil L2)</label>
+        <input type="number" id="p-maxdist" value="0.9" min="0.1" max="2.0" step="0.05" />
+      </div>
+      <div class="param-field">
+        <label>Modèle</label>
+        <select id="p-model">
+          <option value="mistral">mistral</option>
+          <option value="llama3">llama3</option>
+          <option value="phi3">phi3</option>
+          <option value="gemma">gemma</option>
+        </select>
+      </div>
+      <div class="param-field">
+        <label>Retriever</label>
+        <select id="p-retriever">
+          <option value="recursive">recursive</option>
+          <option value="parent-child">parent-child</option>
+        </select>
+      </div>
+    </div>
+    <div class="query-row">
+      <div class="param-field">
+        <label>Question</label>
+        <textarea id="p-query" placeholder="Entrez votre question de test…"></textarea>
+      </div>
+      <button class="btn-run" id="btn-run" onclick="runQuery()">
+        Lancer <span class="spinner" id="spinner"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Cache résultats -->
+  <div class="cache-header">
+    <h2>Cache des résultats (<span id="count">0</span>)</h2>
+    <div class="cache-actions">
+      <button class="btn-sm btn-export" onclick="exportCSV()">Exporter CSV</button>
+      <button class="btn-sm btn-clear" onclick="clearCache()">Vider le cache</button>
+    </div>
+  </div>
+
+  <div id="stats-bar" class="stats-bar" style="display:none">
+    <span>Bon : <strong id="stat-bon">0</strong></span>
+    <span>Pas satisfait : <strong id="stat-nok">0</strong></span>
+    <span>Non noté : <strong id="stat-none">0</strong></span>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="col-ts">Horodatage</th>
+          <th class="col-q">Question</th>
+          <th class="col-params">Paramètres</th>
+          <th class="col-ans">Réponse</th>
+          <th class="col-src">Sources</th>
+          <th class="col-rate">Évaluation</th>
+        </tr>
+      </thead>
+      <tbody id="cache-tbody">
+        <tr id="empty-row">
+          <td colspan="6">
+            <div class="empty-state">
+              <div style="font-size:2rem">🔍</div>
+              <p>Lancez une requête pour remplir le cache.</p>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+  // ── État local ──────────────────────────────────────────────────
+  let cache = JSON.parse(localStorage.getItem("rag_eval_cache") || "[]");
+
+  document.getElementById("p-query").addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); runQuery(); }
+  });
+
+  // ── Rendu initial ───────────────────────────────────────────────
+  renderTable();
+
+  // ── Lancer une requête ──────────────────────────────────────────
+  async function runQuery() {
+    const query    = document.getElementById("p-query").value.trim();
+    const nResults = parseInt(document.getElementById("p-nresults").value, 10);
+    const maxDist  = parseFloat(document.getElementById("p-maxdist").value);
+    const model    = document.getElementById("p-model").value;
+    const retriever= document.getElementById("p-retriever").value;
+
+    if (!query) { alert("Entrez une question."); return; }
+
+    const btn = document.getElementById("btn-run");
+    const spinner = document.getElementById("spinner");
+    btn.disabled = true;
+    spinner.classList.add("visible");
+
+    try {
+      const res = await fetch("/eval/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, n_results: nResults, max_distance: maxDist,
+                               model, retriever_type: retriever })
+      });
+      const data = await res.json();
+      if (data.error) { alert("Erreur : " + data.error); return; }
+
+      const entry = {
+        id:        data.id,
+        timestamp: data.timestamp,
+        query,
+        params:    { n_results: nResults, max_distance: maxDist, model, retriever_type: retriever },
+        answer:    data.answer,
+        sources:   data.sources,
+        rating:    null
+      };
+      cache.unshift(entry);
+      saveCache();
+      renderTable();
+    } catch(e) {
+      alert("Erreur de connexion : " + e.message);
+    } finally {
+      btn.disabled = false;
+      spinner.classList.remove("visible");
+    }
+  }
+
+  // ── Notation ────────────────────────────────────────────────────
+  async function rate(id, value) {
+    const entry = cache.find(e => e.id === id);
+    if (!entry) return;
+
+    try {
+      await fetch("/eval/rate/" + id, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating: value })
+      });
+    } catch { /* silencieux si offline */ }
+
+    entry.rating = value;
+    saveCache();
+    renderTable();
+  }
+
+  // ── Rendu du tableau ────────────────────────────────────────────
+  function renderTable() {
+    const tbody = document.getElementById("cache-tbody");
+    document.getElementById("count").textContent = cache.length;
+
+    if (cache.length === 0) {
+      tbody.innerHTML = `<tr id="empty-row"><td colspan="6">
+        <div class="empty-state"><div style="font-size:2rem">🔍</div>
+        <p>Lancez une requête pour remplir le cache.</p></div></td></tr>`;
+      document.getElementById("stats-bar").style.display = "none";
+      return;
+    }
+
+    // Stats
+    const bon  = cache.filter(e => e.rating === "bon").length;
+    const nok  = cache.filter(e => e.rating === "pas_satisfait").length;
+    const none = cache.length - bon - nok;
+    document.getElementById("stat-bon").textContent  = bon;
+    document.getElementById("stat-nok").textContent  = nok;
+    document.getElementById("stat-none").textContent = none;
+    document.getElementById("stats-bar").style.display = "flex";
+
+    tbody.innerHTML = cache.map(entry => {
+      const ts = new Date(entry.timestamp).toLocaleString("fr-FR", {
+        day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"
+      });
+      const paramTags = Object.entries(entry.params)
+        .map(([k,v]) => `<span class="param-tag">${k}=${v}</span>`).join("");
+
+      const srcChips = (entry.sources || []).slice(0, 4)
+        .map(s => `<span class="src-chip" title="${s.label}">
+          <a href="${s.url}" target="_blank">${s.label}</a>${s.dist !== null ? ' · '+s.dist : ''}
+        </span>`).join("");
+
+      const bonActive = entry.rating === "bon"            ? "active" : "";
+      const nokActive = entry.rating === "pas_satisfait"  ? "active" : "";
+      const ratingLabel = entry.rating === "bon"
+        ? '<div class="rating-saved">✅ Bon</div>'
+        : entry.rating === "pas_satisfait"
+        ? '<div class="rating-saved">❌ Pas satisfait</div>'
+        : "";
+
+      return `<tr>
+        <td class="col-ts">${ts}</td>
+        <td class="col-q">${escHtml(entry.query)}</td>
+        <td class="col-params">${paramTags}</td>
+        <td class="col-ans">
+          <div class="answer-text" onclick="toggleAnswer(this)">${escHtml(entry.answer)}</div>
+        </td>
+        <td class="col-src">${srcChips || '<span style="color:#9ca3af;font-size:.78rem">—</span>'}</td>
+        <td class="col-rate">
+          <div class="rate-btns">
+            <button class="btn-rate btn-bon ${bonActive}" onclick="rate('${entry.id}','bon')">Bon</button>
+            <button class="btn-rate btn-nok ${nokActive}" onclick="rate('${entry.id}','pas_satisfait')">Pas satisfait</button>
+          </div>
+          ${ratingLabel}
+        </td>
+      </tr>`;
+    }).join("");
+  }
+
+  // ── Utilitaires ─────────────────────────────────────────────────
+  function toggleAnswer(el) {
+    el.classList.toggle("expanded");
+  }
+
+  function escHtml(str) {
+    return String(str || "")
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/\n/g,"<br>");
+  }
+
+  function saveCache() {
+    localStorage.setItem("rag_eval_cache", JSON.stringify(cache));
+  }
+
+  function clearCache() {
+    if (!confirm("Vider tout le cache ?")) return;
+    cache = [];
+    saveCache();
+    renderTable();
+  }
+
+  function exportCSV() {
+    if (!cache.length) { alert("Cache vide."); return; }
+    const header = ["horodatage","question","n_results","max_distance","model","retriever","reponse","sources","evaluation"];
+    const rows = cache.map(e => [
+      e.timestamp,
+      e.query,
+      e.params.n_results,
+      e.params.max_distance,
+      e.params.model,
+      e.params.retriever_type,
+      e.answer,
+      (e.sources||[]).map(s=>s.label).join("|"),
+      e.rating || ""
+    ].map(v => '"' + String(v).replace(/"/g,'""') + '"').join(","));
+    const csv = [header.join(","), ...rows].join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "rag_eval_" + Date.now() + ".csv";
+    a.click(); URL.revokeObjectURL(url);
+  }
+</script>
+
+</body>
+</html>

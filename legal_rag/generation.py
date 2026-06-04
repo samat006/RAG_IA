@@ -57,7 +57,7 @@ QUESTION : {query}
 RÉPONSE (courte et directe) :"""
 #. -cite toujours la source de chaque information utilisée (ex: "source: le document X...").
 
-    REWRITE_MODEL = "phi3"
+    REWRITE_MODEL = "mistral"
 
     def rewrite_query(self, query: str, history: list) -> str:
         """Reformule la question en autonome en intégrant l'historique de conversation."""

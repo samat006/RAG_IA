@@ -3,251 +3,543 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AroBot</title>
+  <title>Robbie – Assistant touristique</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #f0f2f5;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f5f6f8;
+      min-height: 100vh;
     }
 
-    header {
-      background: #f25723;
-      color: white;
-      padding: 16px 24px;
+    /* ══ FAB ═══════════════════════════════════════════════════════ */
+    #fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: #C8302A;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 18px rgba(200,48,42,0.45);
       display: flex;
       align-items: center;
-      gap: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      justify-content: center;
+      z-index: 900;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
-    header h1 { font-size: 1.1rem; font-weight: 600; }
-    header p  { font-size: 0.8rem; opacity: 0.7; margin-top: 2px; }
+    #fab:hover { transform: scale(1.08); box-shadow: 0 6px 22px rgba(200,48,42,0.55); }
+    #fab .ia-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background: #C8302A;
+      border: 2px solid white;
+      color: white;
+      font-size: 8px;
+      font-weight: 800;
+      border-radius: 50%;
+      width: 19px;
+      height: 19px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: -0.5px;
+    }
 
-    #chat {
-      flex: 1;
-      overflow-y: auto;
-      padding: 24px 16px;
+    /* ══ WIDGET ════════════════════════════════════════════════════ */
+    #widget {
+      position: fixed;
+      bottom: 94px;
+      right: 24px;
+      width: 300px;
+      height: 430px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 8px 36px rgba(0,0,0,0.18);
       display: flex;
       flex-direction: column;
-      gap: 16px;
-      max-width: 800px;
-      width: 100%;
-      margin: 0 auto;
+      overflow: hidden;
+      z-index: 1000;
+      transform-origin: bottom right;
+      transition: width 0.28s cubic-bezier(0.4,0,0.2,1),
+                  height 0.28s cubic-bezier(0.4,0,0.2,1),
+                  border-radius 0.28s;
+    }
+    #widget.hidden {
+      display: none;
+    }
+    #widget.expanded {
+      bottom: 0; right: 0;
+      width: 100vw;
+      height: 100vh;
+      border-radius: 0;
     }
 
+    /* ── Centrage en plein écran ──────────────────────────────────── */
+    #widget.expanded #messages {
+      padding: 24px max(24px, calc(50% - 380px));
+    }
+    #widget.expanded .w-footer {
+      padding-left:  max(16px, calc(50% - 396px));
+      padding-right: max(16px, calc(50% - 396px));
+    }
+
+    /* Mobile : widget prend toute la largeur */
+    @media (max-width: 500px) {
+      #widget {
+        bottom: 0; right: 0; left: 0;
+        width: 100%;
+        height: 88vh;
+        border-radius: 20px 20px 0 0;
+      }
+      #fab { bottom: 16px; right: 16px; }
+    }
+
+    /* ══ HEADER ════════════════════════════════════════════════════ */
+    .w-header {
+      background: #2B7083;
+      color: white;
+      height: 52px;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    .h-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+    }
+    .h-btn {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.85);
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      transition: color 0.15s, background 0.15s;
+      white-space: nowrap;
+    }
+    .h-btn:hover { color: white; background: rgba(255,255,255,0.12); }
+    .new-label { display: none; }
+    #widget.expanded .new-label { display: inline; }
+
+    .h-title {
+      flex: 1;
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+    #widget.expanded .h-title { text-align: center; }
+
+    .h-actions { display: flex; align-items: center; gap: 2px; }
+    .h-icon-btn {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.85);
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      transition: color 0.15s, background 0.15s;
+    }
+    .h-icon-btn:hover { color: white; background: rgba(255,255,255,0.12); }
+    #widget.expanded #expand-btn svg { width: 22px; height: 22px; }
+
+    /* ══ MESSAGES ══════════════════════════════════════════════════ */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 18px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: white;
+      scroll-behavior: smooth;
+    }
+    #messages::-webkit-scrollbar { width: 3px; }
+    #messages::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 2px; }
+
     .bubble {
-      max-width: 80%;
-      padding: 12px 16px;
-      border-radius: 16px;
-      font-size: 0.95rem;
-      line-height: 1.5;
+      max-width: 83%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      font-size: 0.875rem;
+      line-height: 1.52;
       word-wrap: break-word;
     }
+    .bubble.bot {
+      background: #EAEAEA;
+      color: #1a1a1a;
+      align-self: flex-start;
+      border-bottom-left-radius: 5px;
+    }
     .bubble.user {
-      background: #1e3a5f;
+      background: #2B7083;
       color: white;
       align-self: flex-end;
-      border-bottom-right-radius: 4px;
-    }
-    .bubble.bot {
-      background: white;
-      color: #1a1a2e;
-      align-self: flex-start;
-      border-bottom-left-radius: 4px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      border-bottom-right-radius: 5px;
     }
     .bubble.warning {
       background: #fff8e1;
       color: #7a5c00;
       border-left: 3px solid #f0b429;
+      align-self: flex-start;
     }
 
-    .sources {
-      margin-top: 8px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-    .chip {
-      background: #eef2ff;
-      color: #ea5929;
-      border: 1px solid #c7d2fe;
-      border-radius: 20px;
-      padding: 2px 10px;
-      font-size: 0.75rem;
-      text-decoration: none;
-      cursor: pointer;
-    }
-    .chip:hover { background: #c7d2fe; }
-
-    .inline-link {
-      color: #2563eb;
-      text-decoration: underline dotted;
-      font-weight: 500;
-    }
-    .inline-link:hover { color: #1d4ed8; }
-
-    .typing {
+    /* Typing "..." */
+    .typing-bubble {
+      align-self: flex-start;
+      background: #EAEAEA;
+      border-radius: 18px;
+      border-bottom-left-radius: 5px;
+      padding: 10px 16px;
       display: flex;
       gap: 4px;
       align-items: center;
-      padding: 12px 16px;
     }
-    .typing span {
-      width: 8px; height: 8px;
-      background: #aaa;
+    .typing-bubble span {
+      width: 7px; height: 7px;
+      background: #9ca3af;
       border-radius: 50%;
-      animation: bounce 1.2s infinite;
+      animation: tdot 1.3s infinite;
     }
-    .typing span:nth-child(2) { animation-delay: 0.2s; }
-    .typing span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes bounce {
-      0%, 80%, 100% { transform: translateY(0); }
-      40%           { transform: translateY(-6px); }
+    .typing-bubble span:nth-child(2) { animation-delay: 0.18s; }
+    .typing-bubble span:nth-child(3) { animation-delay: 0.36s; }
+    @keyframes tdot {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+      40%            { transform: translateY(-5px); opacity: 1; }
     }
 
-    footer {
-      background: white;
-      border-top: 1px solid #e5e7eb;
-      padding: 12px 16px;
+    /* Sources */
+    .sources {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-self: flex-start;
+      max-width: 90%;
+    }
+    .chip {
+      background: #e5f3f7;
+      color: #2B7083;
+      border: 1px solid #b3d8e3;
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 0.73rem;
+      text-decoration: none;
+      transition: background 0.15s;
+    }
+    .chip:hover { background: #c5e4ec; }
+
+    /* ══ INPUT BAR ════════════════════════════════════════════════ */
+    .w-footer {
+      background: #f3f4f6;
+      border-top: 1px solid #e9eaec;
+      padding: 10px 12px 2px;
+      flex-shrink: 0;
     }
     .input-row {
-      max-width: 800px;
-      margin: 0 auto;
       display: flex;
+      align-items: center;
       gap: 8px;
     }
-    input[type="text"] {
+    .input-pill {
       flex: 1;
-      padding: 10px 16px;
-      border: 1.5px solid #d1d5db;
-      border-radius: 24px;
-      font-size: 0.95rem;
-      outline: none;
+      display: flex;
+      align-items: center;
+      background: white;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 26px;
+      padding: 0 12px;
+      gap: 6px;
       transition: border-color 0.2s;
     }
-    input[type="text"]:focus { border-color: #1e3a5f; }
-
-    button {
-      background: #5f3c1e;
-      color: white;
+    .input-pill:focus-within { border-color: #2B7083; }
+    .input-pill input {
+      flex: 1;
       border: none;
-      border-radius: 24px;
-      padding: 10px 20px;
-      font-size: 0.9rem;
-      cursor: pointer;
-      transition: background 0.2s;
+      outline: none;
+      font-size: 0.875rem;
+      padding: 10px 0;
+      background: transparent;
+      color: #1a1a1a;
+      min-width: 0;
     }
-    button:hover    { background: #7e572a; }
-    button:disabled { background: #9ca3af; cursor: not-allowed; }
+    .input-pill input::placeholder { color: #b0b5be; }
+    .mic-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #b0b5be;
+      display: flex;
+      align-items: center;
+      padding: 2px;
+      flex-shrink: 0;
+      transition: color 0.15s;
+    }
+    .mic-btn:hover { color: #6b7280; }
+
+    /* Send / Stop button */
+    #send-btn {
+      background: #C8302A;
+      border: none;
+      cursor: pointer;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, border-radius 0.2s, width 0.2s, padding 0.2s;
+    }
+    #send-btn:hover { filter: brightness(0.88); }
+    #send-btn:disabled { background: #d1d5db; cursor: not-allowed; filter: none; }
+    .send-label { display: none; color: white; font-size: 0.875rem; font-weight: 600; white-space: nowrap; }
+
+    /* En mode expanded desktop → bouton pill avec texte */
+    @media (min-width: 501px) {
+      #widget.expanded #send-btn:not(.stopping) {
+        border-radius: 24px;
+        width: auto;
+        padding: 0 18px;
+        gap: 6px;
+      }
+      #widget.expanded #send-btn:not(.stopping) .send-label { display: inline; }
+    }
+
+    .branding {
+      text-align: center;
+      font-size: 0.7rem;
+      color: #b0b5be;
+      padding: 5px 0 6px;
+      letter-spacing: 0.02em;
+    }
   </style>
 </head>
 <body>
 
-<header>
-  <div>
-    <h1>🏛️ AroBot</h1>
-    <p>Tourisme · Hébergement · Activités</p>
-  </div>
-</header>
+<!-- ══ FAB ══════════════════════════════════════════════════════ -->
+<button id="fab" onclick="toggleWidget()" title="Ouvrir Robbie">
+  <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+    <!-- corps -->
+    <rect x="5" y="11" width="22" height="16" rx="4" fill="white" opacity="0.93"/>
+    <!-- yeux -->
+    <circle cx="11.5" cy="18.5" r="2.2" fill="#C8302A"/>
+    <circle cx="20.5" cy="18.5" r="2.2" fill="#C8302A"/>
+    <!-- bouche -->
+    <rect x="10.5" y="22.5" width="11" height="2.2" rx="1.1" fill="#C8302A"/>
+    <!-- antenne -->
+    <line x1="16" y1="5" x2="16" y2="11" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="16" cy="4" r="1.8" fill="white"/>
+    <!-- oreilles -->
+    <rect x="2.5" y="15" width="2.5" height="5" rx="1.25" fill="white" opacity="0.65"/>
+    <rect x="27" y="15" width="2.5" height="5" rx="1.25" fill="white" opacity="0.65"/>
+  </svg>
+  <span class="ia-badge">IA</span>
+</button>
 
-<div id="chat"></div>
+<!-- ══ CHAT WIDGET ═══════════════════════════════════════════════ -->
+<div id="widget" class="hidden">
 
-<footer>
-  <div class="input-row">
-    <input id="input" type="text" placeholder="Posez votre question…" autocomplete="off" />
-    <button id="btn" onclick="sendQuery()">Envoyer</button>
+  <!-- Header -->
+  <div class="w-header">
+    <div class="h-left">
+      <button class="h-btn" onclick="newChat()" title="Nouvelle conversation">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        <span class="new-label">Nouvelle question</span>
+      </button>
+    </div>
+
+    <span class="h-title">Robbie</span>
+
+    <div class="h-actions">
+      <button class="h-icon-btn" id="expand-btn" onclick="toggleExpand()" title="Plein écran">
+        <svg id="expand-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="7" y1="17" x2="3" y2="21"/><polyline points="3 17 3 21 7 21"/>
+          <line x1="17" y1="7" x2="21" y2="3"/><polyline points="21 7 21 3 17 3"/>
+        </svg>
+      </button>
+      <button class="h-icon-btn" onclick="closeWidget()" title="Fermer">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
   </div>
-</footer>
+
+  <!-- Messages -->
+  <div id="messages">
+    <div class="bubble bot">
+      Bonjour, Je suis votre assistant touristique. Posez-moi une question sur les hébergements, activités ou le patrimoine
+    </div>
+  </div>
+
+  <!-- Footer / Input -->
+  <div class="w-footer">
+    <div class="input-row">
+      <div class="input-pill">
+        <input id="input" type="text" placeholder="Posez votre question..." autocomplete="off"/>
+        <button class="mic-btn" title="Microphone" onclick="startMic()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </button>
+      </div>
+      <button id="send-btn" onclick="sendQuery()">
+        <span class="send-label">Envoyer</span>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5"/>
+          <polyline points="5 12 12 5 19 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="branding">By Arobase</div>
+  </div>
+
+</div>
 
 <script>
-  const chat       = document.getElementById("chat");
-  const input      = document.getElementById("input");
-  const btn        = document.getElementById("btn");
   const SESSION_ID = crypto.randomUUID();
+  const widget   = document.getElementById("widget");
+  const fab      = document.getElementById("fab");
+  const input    = document.getElementById("input");
+  const sendBtn  = document.getElementById("send-btn");
+  const msgArea  = document.getElementById("messages");
+  const expIcon  = document.getElementById("expand-icon");
+  let expanded   = false;
+  let abortCtrl  = null;
+
+  const SVG_SEND_ICO = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>`;
+  const SVG_STOP_ICO = `<svg width="14" height="14" viewBox="0 0 14 14" fill="white"><rect x="2" y="2" width="10" height="10" rx="1.5"/></svg>`;
+
+  function setStopMode(on) {
+    sendBtn.classList.toggle("stopping", on);
+    sendBtn.innerHTML = on
+      ? `<span class="send-label">Arrêter</span>${SVG_STOP_ICO}`
+      : `<span class="send-label">Envoyer</span>${SVG_SEND_ICO}`;
+  }
+
+  // ↗↙ vers les coins (expand) / pointe vers le centre (compress)
+  const SVG_EXPAND   = `<line x1="7" y1="17" x2="3" y2="21"/><polyline points="3 17 3 21 7 21"/><line x1="17" y1="7" x2="21" y2="3"/><polyline points="21 7 21 3 17 3"/>`;
+  const SVG_COMPRESS = `<line x1="20" y1="4" x2="13" y2="11"/><polyline points="18 11 13 11 13 6"/><line x1="4" y1="20" x2="11" y2="13"/><polyline points="6 13 11 13 11 18"/>`;
+
+  function toggleWidget() {
+    if (widget.classList.contains("hidden")) openWidget();
+    else closeWidget();
+  }
+  function openWidget() {
+    widget.classList.remove("hidden");
+    input.focus();
+  }
+  function closeWidget() {
+    widget.classList.add("hidden");
+    if (expanded) {
+      widget.classList.remove("expanded");
+      expanded = false;
+      expIcon.innerHTML = SVG_EXPAND;
+      fab.style.display = "flex";
+    }
+  }
+  function toggleExpand() {
+    expanded = !expanded;
+    widget.classList.toggle("expanded", expanded);
+    expIcon.innerHTML = expanded ? SVG_COMPRESS : SVG_EXPAND;
+    fab.style.display = expanded ? "none" : "flex";
+  }
+  function newChat() {
+    msgArea.innerHTML = `<div class="bubble bot">Bonjour, Je suis votre assistant touristique. Posez-moi une question sur les hébergements, activités ou le patrimoine</div>`;
+    input.value = "";
+    input.focus();
+  }
 
   input.addEventListener("keydown", e => { if (e.key === "Enter") sendQuery(); });
 
   function addBubble(cls) {
-    const wrap   = document.createElement("div");
-    const bubble = document.createElement("div");
-    bubble.className = `bubble ${cls}`;
-    wrap.appendChild(bubble);
-    chat.appendChild(wrap);
-    chat.scrollTop = chat.scrollHeight;
-    return { wrap, bubble };
+    const d = document.createElement("div");
+    d.className = "bubble " + cls;
+    msgArea.appendChild(d);
+    msgArea.scrollTop = msgArea.scrollHeight;
+    return d;
   }
-
-  function addSources(wrap, sources) {
-    if (!sources.length) return;
+  function addTyping() {
+    const d = document.createElement("div");
+    d.className = "typing-bubble";
+    d.innerHTML = "<span></span><span></span><span></span>";
+    msgArea.appendChild(d);
+    msgArea.scrollTop = msgArea.scrollHeight;
+    return d;
+  }
+  function addSources(sources) {
+    if (!sources || !sources.length) return;
     const row = document.createElement("div");
     row.className = "sources";
     sources.forEach(s => {
-      const chip = document.createElement("a");
-      chip.className = "chip";
-      chip.href = s.url;
-      chip.target = "_blank";
-      chip.rel = "noopener noreferrer";
-      chip.textContent = `📄 ${s.label}${s.dist !== null ? " · " + s.dist : ""}`;
-      row.appendChild(chip);
+      const a = document.createElement("a");
+      a.className = "chip";
+      a.href = s.url; a.target = "_blank"; a.rel = "noopener noreferrer";
+      a.textContent = "📄 " + s.label + (s.dist !== null ? " · " + s.dist : "");
+      row.appendChild(a);
     });
-    wrap.appendChild(row);
+    msgArea.appendChild(row);
+    msgArea.scrollTop = msgArea.scrollHeight;
   }
-
   function linkify(text, sources) {
-    // Échappe le texte brut pour éviter l'injection HTML
-    let safe = text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/\n/g, "<br>");
-
-    // Remplace chaque nom de source cité dans le texte par un lien
+    let safe = text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
     sources.forEach(s => {
       if (!s.url) return;
-      const escaped = s.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const re = new RegExp(escaped, "gi");
-      safe = safe.replace(re, `<a href="${s.url}" target="_blank" rel="noopener" class="inline-link">${s.label}</a>`);
+      const esc = s.label.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+      safe = safe.replace(new RegExp(esc,"gi"),
+        `<a href="${s.url}" target="_blank" rel="noopener" style="color:#2B7083;text-decoration:underline dotted">${s.label}</a>`);
     });
     return safe;
   }
 
-  function addTyping() {
-    const { wrap } = addBubble("bot typing");
-    wrap.querySelector(".bubble").innerHTML = "<span></span><span></span><span></span>";
-    return wrap;
-  }
-
   async function sendQuery() {
+    if (abortCtrl) { abortCtrl.abort(); return; }
+
     const q = input.value.trim();
     if (!q) return;
-
-    const { bubble: userBubble } = addBubble("user");
-    userBubble.textContent = q;
+    addBubble("user").textContent = q;
     input.value = "";
-    btn.disabled = true;
+    setStopMode(true);
+    const typing = addTyping();
 
-    const loader = addTyping();
-
+    abortCtrl = new AbortController();
     try {
       const res = await fetch("/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query: q, session_id: SESSION_ID })
+        body: JSON.stringify({ query: q, session_id: SESSION_ID }),
+        signal: abortCtrl.signal
       });
 
-      loader.remove();
-      const { wrap, bubble } = addBubble("bot");
-      bubble.textContent = "";
-
+      typing.remove();
+      const botBubble = addBubble("bot");
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let buf = "";
-      let fullText = "";
+      let buf = "", fullText = "", finalSources = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -259,31 +551,41 @@
         for (const line of lines) {
           if (!line.startsWith("data:")) continue;
           const data = JSON.parse(line.slice(5).trim());
-
           if (data.token) {
             fullText += data.token;
-            bubble.textContent = fullText;
-            chat.scrollTop = chat.scrollHeight;
+            botBubble.textContent = fullText;
+            msgArea.scrollTop = msgArea.scrollHeight;
           } else if (data.error) {
-            bubble.className = "bubble bot";
-            bubble.textContent = "Je n'ai pas trouvé d'information correspondant à votre question. Pourriez-vous la reformuler ou préciser ce que vous recherchez ?";
+            botBubble.className = "bubble bot warning";
+            botBubble.textContent = "Je n'ai pas trouvé d'information correspondant à votre question. Pourriez-vous la reformuler ?";
           } else if (data.done) {
-            // Linkifier les sources citées dans le texte de la réponse
-            bubble.innerHTML = linkify(fullText, data.sources || []);
-            addSources(wrap, data.sources || []);
+            finalSources = data.sources || [];
+            botBubble.innerHTML = linkify(fullText, finalSources);
+            addSources(finalSources);
           }
         }
       }
-    } catch {
-      loader.remove();
-      const { bubble } = addBubble("bot warning");
-      bubble.textContent = "❌ Erreur de connexion avec le serveur.";
+    } catch (err) {
+      typing.remove();
+      if (err.name !== "AbortError") {
+        addBubble("bot warning").textContent = "❌ Erreur de connexion avec le serveur.";
+      }
     }
 
-    btn.disabled = false;
+    abortCtrl = null;
+    setStopMode(false);
     input.focus();
   }
-</script>
 
+  function startMic() {
+    if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) return;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const r = new SR();
+    r.lang = "fr-FR";
+    r.interimResults = false;
+    r.onresult = e => { input.value = e.results[0][0].transcript; };
+    r.start();
+  }
+</script>
 </body>
 </html>
