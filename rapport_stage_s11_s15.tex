@@ -1,0 +1,1071 @@
+\documentclass[12pt,a4paper]{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{mdframed}
+\usepackage{setspace}
+\usepackage{parskip}
+\usepackage{colortbl}
+\usepackage{tabularx}
+\usepackage{listings}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric}
+
+\geometry{top=2.5cm, bottom=2.5cm, left=3cm, right=2.5cm}
+\setlength{\headheight}{15pt}
+
+% Colors
+\definecolor{primaryblue}{RGB}{0, 71, 133}
+\definecolor{accentblue}{RGB}{0, 120, 210}
+\definecolor{lightgray}{RGB}{245, 245, 245}
+\definecolor{darkgray}{RGB}{80, 80, 80}
+\definecolor{alertred}{RGB}{180, 30, 30}
+\definecolor{successgreen}{RGB}{30, 130, 70}
+\definecolor{warnorange}{RGB}{200, 100, 0}
+\definecolor{rowblue}{RGB}{220, 235, 250}
+\definecolor{rowgreen}{RGB}{220, 245, 225}
+\definecolor{rowred}{RGB}{250, 220, 220}
+\definecolor{codebg}{RGB}{248, 248, 252}
+\definecolor{codeframe}{RGB}{180, 200, 230}
+\definecolor{codecomment}{RGB}{100, 130, 100}
+\definecolor{codekeyword}{RGB}{0, 80, 160}
+\definecolor{codestring}{RGB}{160, 60, 0}
+\definecolor{codenumber}{RGB}{130, 130, 130}
+
+% Section formatting
+\titleformat{\chapter}[block]
+  {\color{primaryblue}\Large\bfseries}{\thechapter.}{0.8em}{}
+  [\color{primaryblue}\titlerule]
+\titleformat{\section}{\color{accentblue}\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\color{darkgray}\normalsize\bfseries}{\thesubsection}{0.5em}{}
+\titlespacing*{\chapter}{0pt}{0pt}{1em}
+
+% Header/Footer
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{darkgray}Rapport de Stage -- Semaines 11 \`{a} 15}
+\fancyhead[R]{\small\color{darkgray}AROBASE SARL}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\hypersetup{colorlinks=true, linkcolor=primaryblue, urlcolor=accentblue,
+  pdftitle={Rapport de Stage S11-S15 - AroBot RAG - Arobase SARL}}
+
+% Info boxes
+\newmdenv[backgroundcolor=lightgray, linecolor=accentblue, linewidth=2pt,
+  leftline=true, topline=false, rightline=false, bottomline=false,
+  innerleftmargin=12pt, innerrightmargin=8pt,
+  innertopmargin=8pt, innerbottommargin=8pt]{infobox}
+
+\newmdenv[backgroundcolor=alertred!8, linecolor=alertred, linewidth=2pt,
+  leftline=true, topline=false, rightline=false, bottomline=false,
+  innerleftmargin=12pt, innerrightmargin=8pt,
+  innertopmargin=8pt, innerbottommargin=8pt]{warningbox}
+
+\newmdenv[backgroundcolor=successgreen!8, linecolor=successgreen, linewidth=2pt,
+  leftline=true, topline=false, rightline=false, bottomline=false,
+  innerleftmargin=12pt, innerrightmargin=8pt,
+  innertopmargin=8pt, innerbottommargin=8pt]{successbox}
+
+\newmdenv[backgroundcolor=warnorange!10, linecolor=warnorange, linewidth=2pt,
+  leftline=true, topline=false, rightline=false, bottomline=false,
+  innerleftmargin=12pt, innerrightmargin=8pt,
+  innertopmargin=8pt, innerbottommargin=8pt]{notebox}
+
+% Python listings style
+\lstdefinelanguage{Python}{
+  keywords={import, from, def, class, return, if, elif, else, for, while,
+             try, except, finally, with, as, in, not, and, or, is, lambda,
+             True, False, None, self, super, async, await, yield, pass,
+             break, continue, raise, global, nonlocal, del, assert},
+  keywordstyle=\color{codekeyword}\bfseries,
+  comment=[l]{\#},
+  commentstyle=\color{codecomment}\itshape,
+  stringstyle=\color{codestring},
+  morestring=[b]",
+  morestring=[b]',
+  sensitive=true,
+}
+
+% JavaScript listings style
+\lstdefinelanguage{JavaScript}{
+  keywords={import, export, default, from, const, let, var, function, return,
+             if, else, async, await, try, catch, new, null, true, false,
+             process, require, module, this},
+  keywordstyle=\color{codekeyword}\bfseries,
+  comment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  commentstyle=\color{codecomment}\itshape,
+  stringstyle=\color{codestring},
+  morestring=[b]",
+  morestring=[b]',
+  morestring=[b]`,
+  sensitive=true,
+}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{codebg},
+  frame=single,
+  framerule=0.5pt,
+  rulecolor=\color{codeframe},
+  numbers=left,
+  numberstyle=\tiny\color{codenumber},
+  numbersep=8pt,
+  showstringspaces=false,
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=2,
+  xleftmargin=15pt,
+  xrightmargin=5pt,
+  captionpos=b,
+  aboveskip=10pt,
+  belowskip=6pt,
+}
+
+% ============================================================
+\begin{document}
+
+% ==================== COVER PAGE ====================
+\begin{titlepage}
+  \centering\vspace*{1cm}
+  {\color{primaryblue}\rule{\linewidth}{3pt}}\vspace{0.5cm}
+
+  {\huge\bfseries\color{primaryblue} Rapport de Stage}\\[0.4cm]
+  {\Large\color{darkgray} Semaines 11 \`{a} 15 -- Phase de D\'{e}veloppement RAG}\\[0.2cm]
+  {\normalsize\color{darkgray} Justifications techniques, conception et pr\'{e}sentation du code produit}
+
+  \vspace{0.5cm}{\color{primaryblue}\rule{\linewidth}{1.5pt}}\vspace{2cm}
+
+  \begin{minipage}{0.48\textwidth}
+    \centering\textbf{\large Entreprise d'accueil}\\[0.3cm]
+    {\color{primaryblue}\large\bfseries AROBASE SARL}\\[0.2cm]
+    \small Agence de cr\'{e}ation multim\'{e}dia\\
+    \textit{``La solution multim\'{e}dia pour votre Communication !''}\\[0.3cm]
+    19 rue cours Paoli\\
+    20250 Corte -- Corse
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.48\textwidth}
+    \centering\textbf{\large Informations stage}\\[0.3cm]
+    \begin{tabular}{ll}
+      \small D\'{e}but du stage   & \small : F\'{e}vrier 2026 \\
+      \small P\'{e}riode          & \small : S11 -- S15 \\
+      \small Du                   & \small : 29 avril 2026 \\
+      \small Au                   & \small : 5 juin 2026 \\
+    \end{tabular}
+  \end{minipage}
+
+  \vspace{3cm}
+  \fbox{\begin{minipage}{0.85\textwidth}
+    \centering\vspace{0.3cm}
+    {\large\bfseries Sujet}\\[0.3cm]
+    \textit{D\'{e}veloppement d'un assistant conversationnel bas\'{e} sur RAG}\\
+    \textit{pour le tourisme en Centre-Corse -- AroBot}\vspace{0.3cm}
+  \end{minipage}}
+
+  \vfill{\color{darkgray}\small Universit\'{e} de Corse Pasquale Paoli -- Master 2 Informatique -- Ann\'{e}e 2025-2026}
+\end{titlepage}
+
+\tableofcontents\newpage
+
+% ============================================================
+\chapter{Introduction -- Le projet AroBot RAG}
+
+\section{Contexte du stage}
+
+Dans le cadre du stage de Master 2, le projet confi\'{e} par AROBASE SARL consiste \`{a}
+concevoir et d\'{e}velopper un \textbf{assistant conversationnel intelligent} d\'{e}di\'{e} au tourisme
+en Centre-Corse. Cet assistant, baptis\'{e} \textbf{AroBot}, doit permettre aux visiteurs
+d'obtenir des informations sur les h\'{e}bergements, activit\'{e}s et le patrimoine de la r\'{e}gion,
+en interagissant en langage naturel.
+
+\section{Description du projet}
+
+AroBot repose sur l'architecture \textbf{RAG} (\textit{Retrieval-Augmented Generation}),
+qui combine la recherche s\'{e}mantique dans une base documentaire locale avec la g\'{e}n\'{e}ration
+de r\'{e}ponses par un mod\`{e}le de langage. Le syst\`{e}me est \textbf{enti\`{e}rement local} :
+aucune donn\'{e}e n'est envoy\'{e}e vers des services cloud, ce qui garantit la confidentialit\'{e}
+des documents des clients d'AROBASE.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\bfseries}p{4cm} p{9cm}}
+  \toprule
+  \rowcolor{rowblue}
+  \textbf{Composant} & \textbf{Description} \\
+  \midrule
+  Corpus documentaire & Brochures PDF touristiques, guides d'h\'{e}bergement, sites web officiels \\
+  Base vectorielle & ChromaDB (stockage local persistant des embeddings) \\
+  Mod\`{e}le d'embedding & nomic-embed-text via Ollama (768 dimensions, multilingue) \\
+  Mod\`{e}le de g\'{e}n\'{e}ration & Mistral via Ollama (r\'{e}ponses en langue naturelle) \\
+  Interface & Widget JS int\'{e}grable + interface standalone Flask \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\section{P\'{e}riode couverte -- Semaines 11 \`{a} 15}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{>{\bfseries}p{1.5cm} p{3cm} p{8cm}}
+  \toprule
+  \rowcolor{rowblue}
+  \textbf{Sem.} & \textbf{Dates} & \textbf{Th\`{e}me principal} \\
+  \midrule
+  S11 & 29 avr -- 5 mai & Analyse des besoins, choix des technologies, mise en place de l'environnement \\
+  S12 & 6 -- 12 mai & D\'{e}veloppement des loaders PDF (7 modes) et strat\'{e}gies de chunking \\
+  S13 & 13 -- 19 mai & Pipeline de retrieval hybride, scraping web, modes separate/mixed \\
+  S14 & 20 -- 26 mai & Serveur Flask SSE, widget JS int\'{e}grable, interface standalone \\
+  S15 & 27 mai -- 5 juin & Tests, \'{e}valuation Ragas, r\'{e}glage des param\`{e}tres RAG \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+% ============================================================
+\chapter{Technologies utilis\'{e}es -- Justifications et comparatifs}
+
+\section{\'{E}tape 1 -- Pr\'{e}sentation du projet et contraintes}
+
+Avant de s\'{e}lectionner les technologies, il est n\'{e}cessaire d'identifier les contraintes
+du projet. Ces contraintes permettront de d\'{e}gager les crit\`{e}res d'\'{e}valuation pertinents.
+
+\begin{warningbox}
+\textbf{Contraintes identifi\'{e}es :}
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{D\'{e}ploiement local} : le syst\`{e}me doit fonctionner sans connexion internet
+        (borne dans les offices de tourisme, zones \`{a} connectivit\'{e} limit\'{e}e en Corse).
+  \item \textbf{Confidentialit\'{e}} : les documents touristiques des clients d'AROBASE ne
+        doivent jamais transiter par des API cloud tierces.
+  \item \textbf{Budget z\'{e}ro} : pas de coût r\'{e}current d'API (OpenAI, Pinecone...).
+  \item \textbf{Corpus vari\'{e}} : brochures PDF \`{a} mise en page complexe (colonnes, tableaux
+        de prix, photos) + pages web dynamiques.
+  \item \textbf{Langue fran\c{c}aise} : corpus et requ\^{e}tes principalement en fran\c{c}ais,
+        avec des terminologies corses et italiennes.
+  \item \textbf{Int\'{e}gration l\'{e}g\`{e}re} : le widget doit pouvoir \^{e}tre int\'{e}gr\'{e} sur
+        n'importe quel site client d'AROBASE via une simple balise \texttt{<script>}.
+\end{enumerate}
+\end{warningbox}
+
+\section{\'{E}tape 2 -- Technologies candidates et crit\`{e}res d'\'{e}valuation}
+
+Les contraintes font \'{e}merger trois \textbf{composants cl\'{e}s} \`{a} choisir :
+la base de donn\'{e}es vectorielle, le mod\`{e}le de langage/embeddings,
+et la biblioth\`{e}que d'extraction PDF. Pour chaque composant, entre 3 et 4 technologies
+candidates ont \'{e}t\'{e} \'{e}valu\'{e}es.
+
+Les \textbf{crit\`{e}res d'\'{e}valuation communs} (finalis\'{e}s apr\`{e}s analyse des technologies) sont :
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{>{\bfseries\small}p{0.5cm} >{\bfseries}p{4cm} p{8cm}}
+  \toprule
+  \rowcolor{rowblue}
+  \textbf{N\textdegree} & \textbf{Crit\`{e}re} & \textbf{D\'{e}finition} \\
+  \midrule
+  C1 & Co\^{u}t de fonctionnement & Gratuit vs. abonnement/facturation \`{a} l'usage \\
+  C2 & D\'{e}ploiement hors ligne & Fonctionnement sans connexion internet \\
+  C3 & Confidentialit\'{e} des donn\'{e}es & Les donn\'{e}es restent sur la machine locale \\
+  C4 & Qualit\'{e} de recherche & Pr\'{e}cision du retrieval (recall@k) \\
+  C5 & Filtrage par m\'{e}tadonn\'{e}es & Possibilit\'{e} de filtrer par type, source, date... \\
+  C6 & Int\'{e}gration Python & Facilit\'{e} d'utilisation depuis Python \\
+  C7 & Support du fran\c{c}ais & Qualit\'{e} sur les textes en fran\c{c}ais \\
+  C8 & Maintenabilit\'{e} & Communaut\'{e} active, documentation, licence open-source \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\section{\'{E}tape 3 -- Comparatif : bases de donn\'{e}es vectorielles}
+
+\textbf{Technologies candidates :} ChromaDB, Pinecone, Qdrant, Weaviate.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{\linewidth}{>{\bfseries\small}p{2.5cm} X X X X}
+  \toprule
+  \rowcolor{rowblue}
+  \textbf{Crit\`{e}re} & \textbf{ChromaDB} & \textbf{Pinecone} & \textbf{Qdrant} & \textbf{Weaviate} \\
+  \midrule
+  C1 Co\^{u}t          & \cellcolor{rowgreen}\textbf{Gratuit}    & \cellcolor{rowred}\textbf{Payant}      & \cellcolor{rowgreen}\textbf{Gratuit}   & \cellcolor{warnorange!30}\textbf{Freemium} \\
+  C2 Hors ligne         & \cellcolor{rowgreen}\textbf{Oui}        & \cellcolor{rowred}\textbf{Non}         & \cellcolor{rowgreen}\textbf{Oui}       & \cellcolor{warnorange!30}\textbf{Partiel}  \\
+  C3 Confidentialit\'{e}& \cellcolor{rowgreen}\textbf{Totale}     & \cellcolor{rowred}\textbf{Cloud}       & \cellcolor{rowgreen}\textbf{Totale}    & \cellcolor{warnorange!30}\textbf{Option}   \\
+  C4 Qualit\'{e}        & \cellcolor{warnorange!30}\textbf{Bonne} & \cellcolor{rowgreen}\textbf{Excellente}& \cellcolor{rowgreen}\textbf{Excellente}& \cellcolor{rowgreen}\textbf{Excellente}   \\
+  C5 M\'{e}tadonn\'{e}es& \cellcolor{rowgreen}\textbf{Oui}       & \cellcolor{warnorange!30}\textbf{Limit\'{e}} & \cellcolor{rowgreen}\textbf{Oui}  & \cellcolor{rowgreen}\textbf{Oui}          \\
+  C6 Python             & \cellcolor{rowgreen}\textbf{Native}     & \cellcolor{rowgreen}\textbf{SDK}       & \cellcolor{rowgreen}\textbf{SDK}       & \cellcolor{warnorange!30}\textbf{SDK}      \\
+  C7 Fran\c{c}ais       & \cellcolor{rowgreen}\textbf{Oui}        & \cellcolor{rowgreen}\textbf{Oui}       & \cellcolor{rowgreen}\textbf{Oui}       & \cellcolor{rowgreen}\textbf{Oui}          \\
+  C8 Maintenance        & \cellcolor{rowgreen}\textbf{Active}     & \cellcolor{rowgreen}\textbf{Active}    & \cellcolor{rowgreen}\textbf{Active}    & \cellcolor{rowgreen}\textbf{Active}       \\
+  \bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{successbox}
+\textbf{\'{E}tape 4 -- Choix retenu : ChromaDB.}
+ChromaDB est la seule solution satisfaisant simultan\'{e}ment les contraintes C1, C2 et C3
+(gratuit, hors ligne, local). Son int\'{e}gration Python est la plus simple du march\'{e}
+(\texttt{chromadb.PersistentClient(path="./db")} en une ligne), et elle supporte nativement
+le filtrage par m\'{e}tadonn\'{e}es avec une syntaxe \texttt{\$in}/\texttt{\$contains} directe.
+Pinecone et Weaviate ont \'{e}t\'{e} \'{e}cart\'{e}s car ils n\'{e}cessitent une connexion cloud.
+\end{successbox}
+
+\section{\'{E}tape 3 -- Comparatif : mod\`{e}les de langage et d'embeddings}
+
+\textbf{Technologies candidates :} Ollama (local), OpenAI API, Hugging Face Inference API.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{\linewidth}{>{\bfseries\small}p{2.5cm} X X X}
+  \toprule
+  \rowcolor{rowblue}
+  \textbf{Crit\`{e}re} & \textbf{Ollama (local)} & \textbf{OpenAI API} & \textbf{Hugging Face API} \\
+  \midrule
+  C1 Co\^{u}t          & \cellcolor{rowgreen}\textbf{Gratuit}     & \cellcolor{rowred}\textbf{Pay\'{e}/token}  & \cellcolor{warnorange!30}\textbf{Freemium} \\
+  C2 Hors ligne         & \cellcolor{rowgreen}\textbf{Oui}         & \cellcolor{rowred}\textbf{Non}             & \cellcolor{rowred}\textbf{Non}             \\
+  C3 Confidentialit\'{e}& \cellcolor{rowgreen}\textbf{Totale}      & \cellcolor{rowred}\textbf{API externe}     & \cellcolor{rowred}\textbf{API externe}     \\
+  C4 Qualit\'{e}        & \cellcolor{warnorange!30}\textbf{Bonne}  & \cellcolor{rowgreen}\textbf{Excellente}    & \cellcolor{warnorange!30}\textbf{Variable} \\
+  C6 Python             & \cellcolor{rowgreen}\textbf{SDK natif}   & \cellcolor{rowgreen}\textbf{SDK}           & \cellcolor{rowgreen}\textbf{SDK}           \\
+  C7 Fran\c{c}ais       & \cellcolor{rowgreen}\textbf{Mistral}     & \cellcolor{rowgreen}\textbf{GPT-4}         & \cellcolor{warnorange!30}\textbf{Variable} \\
+  C8 Maintenance        & \cellcolor{rowgreen}\textbf{Active}      & \cellcolor{rowgreen}\textbf{Active}        & \cellcolor{rowgreen}\textbf{Active}        \\
+  \bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{successbox}
+\textbf{\'{E}tape 4 -- Choix retenu : Ollama + Mistral + nomic-embed-text.}
+Ollama est la seule solution satisfaisant C1, C2 et C3 simultan\'{e}ment.
+Le mod\`{e}le \textbf{Mistral} a \'{e}t\'{e} retenu pour la g\'{e}n\'{e}ration car il est optimis\'{e}
+pour le fran\c{c}ais (d\'{e}velopp\'{e} par une entreprise fran\c{c}aise).
+Le mod\`{e}le d'embedding \textbf{nomic-embed-text} (768 dimensions, multilingue) a \'{e}t\'{e}
+pr\'{e}f\'{e}r\'{e} \`{a} \texttt{all-MiniLM-L6-v2} pour sa meilleure couverture du fran\c{c}ais
+et sa capacit\'{e} de contexte plus large (8\,192 tokens).
+\end{successbox}
+
+\section{\'{E}tape 3 -- Comparatif : extraction de documents PDF}
+
+Les brochures touristiques en PDF pr\'{e}sentent des d\'{e}fis sp\'{e}cifiques :
+mises en page multi-colonnes, tableaux de prix, logos, photos.
+Quatre strat\'{e}gies d'extraction ont \'{e}t\'{e} compar\'{e}es.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{\linewidth}{>{\bfseries\small}p{2.8cm} X X X X}
+  \toprule
+  \rowcolor{rowblue}
+  \textbf{Crit\`{e}re} & \textbf{IBM Docling} & \textbf{PyMuPDF} & \textbf{PDFPlumber} & \textbf{Tesseract OCR} \\
+  \midrule
+  Layout complexe   & \cellcolor{rowgreen}\textbf{Excellent}     & \cellcolor{warnorange!30}\textbf{Moyen}     & \cellcolor{warnorange!30}\textbf{Bon}     & \cellcolor{rowred}\textbf{Faible}    \\
+  Tableaux de prix  & \cellcolor{rowgreen}\textbf{Excellent}     & \cellcolor{rowred}\textbf{Faible}           & \cellcolor{rowgreen}\textbf{Excellent}   & \cellcolor{rowred}\textbf{Faible}    \\
+  Documents scann\'{e}s& \cellcolor{rowred}\textbf{Non}           & \cellcolor{rowred}\textbf{Non}              & \cellcolor{rowred}\textbf{Non}           & \cellcolor{rowgreen}\textbf{Oui}     \\
+  Sortie structur\'{e}e& \cellcolor{rowgreen}\textbf{Markdown}   & \cellcolor{warnorange!30}\textbf{Texte brut}& \cellcolor{warnorange!30}\textbf{Texte}  & \cellcolor{rowred}\textbf{Texte brut}\\
+  Vitesse           & \cellcolor{rowred}\textbf{Lente (DL)}      & \cellcolor{rowgreen}\textbf{Rapide}         & \cellcolor{rowgreen}\textbf{Rapide}      & \cellcolor{rowred}\textbf{Tr\`{e}s lente} \\
+  Open-source       & \cellcolor{rowgreen}\textbf{Oui}           & \cellcolor{rowgreen}\textbf{Oui}            & \cellcolor{rowgreen}\textbf{Oui}         & \cellcolor{rowgreen}\textbf{Oui}     \\
+  \bottomrule
+\end{tabularx}
+\end{center}
+
+\begin{successbox}
+\textbf{\'{E}tape 4 -- Choix retenu : cascade Docling $\rightarrow$ PDFPlumber $\rightarrow$ PyMuPDF $\rightarrow$ Tesseract.}
+Aucune technologie seule ne couvre tous les cas. La solution adopt\'{e}e est une
+\textbf{cascade de fallbacks} configur\'{e}e par \texttt{PDF\_MODE} :
+Docling (mode par d\'{e}faut pour les brochures touristiques complexes),
+PDFPlumber (tableaux de prix tabulaires), PyMuPDF (documents simples, rapide),
+Tesseract (pages scann\'{e}es uniquement). Docling est privil\'{e}gi\'{e} car il
+utilise un mod\`{e}le de d\'{e}tection de layout par apprentissage profond
+(IBM Research) et produit du Markdown structur\'{e} directement exploitable
+par le MarkdownChunker.
+\end{successbox}
+
+\section{Veille technologique -- \'{E}volution des syst\`{e}mes RAG}
+
+\subsection{Architecture RAG : de na\"{i}f \`{a} modulaire}
+
+L'architecture RAG a consid\'{e}rablement \'{e}volu\'{e} depuis sa publication initiale
+(Lewis et al., 2020). On distingue aujourd'hui trois g\'{e}n\'{e}rations :
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{>{\bfseries}p{3.5cm} p{3.5cm} p{6cm}}
+  \toprule
+  \rowcolor{rowblue}
+  \textbf{G\'{e}n\'{e}ration} & \textbf{Approche} & \textbf{Innovation} \\
+  \midrule
+  Naive RAG (2020) & Chunk $\rightarrow$ Embed $\rightarrow$ Search $\rightarrow$ Generate & Concept de base \\
+  Advanced RAG (2023) & Query rewriting, HyDE, Reranking & Am\'{e}lioration de la pr\'{e}cision \\
+  Modular RAG (2024) & Graph RAG, Agentic RAG, Self-RAG & Flexibilit\'{e} et r\'{e}flexivit\'{e} \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Techniques impl\'{e}ment\'{e}es dans AroBot}
+
+Le projet AroBot int\`{e}gre plusieurs techniques d'Advanced RAG :
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Query Rewriting} : reformulation automatique des questions de suivi
+        (\og{}et lui ?\fg{} $\rightarrow$ question autonome) via un appel LLM d\'{e}di\'{e}.
+  \item \textbf{Hybrid Search} : combinaison de la recherche dense (embeddings)
+        et de la recherche par mots-cl\'{e}s (entit\'{e}s nomm\'{e}es comme \og{}H\^{o}tel Sampiero\fg{}).
+  \item \textbf{Parent-Document Retrieval} : recherche sur de petits chunks pr\'{e}cis,
+        r\'{e}cup\'{e}ration de grands chunks riches pour le LLM.
+  \item \textbf{Distance Filtering} : rejet des chunks trop \'{e}loign\'{e}s s\'{e}mantiquement
+        (\texttt{MAX\_DISTANCE = 0.9}) pour \'{e}viter les hallucinations.
+\end{itemize}
+
+\subsection{Tendances 2025 surveill\'{e}es}
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Llama 3.x / Phi-3 / Gemma 2} : alternatives \`{a} Mistral via Ollama,
+        potentiellement plus performantes sur le fran\c{c}ais.
+  \item \textbf{ColBERT / SPLADE} : mod\`{e}les de recherche hybride end-to-end plus pr\'{e}cis
+        que la combinaison embedding + keyword.
+  \item \textbf{Ragas 0.2} : \'{e}volution du framework d'\'{e}valuation utilis\'{e} dans ce projet
+        (m\'{e}triques faithfulness, context\_precision, answer\_relevancy).
+  \item \textbf{Multimodal RAG} : ChromaDB pr\'{e}pare le support des embeddings d'images,
+        pertinent pour les brochures touristiques avec photos.
+\end{itemize}
+
+% ============================================================
+\chapter{Conception -- Architecture et diagrammes}
+
+\section{Architecture g\'{e}n\'{e}rale du syst\`{e}me}
+
+Le syst\`{e}me est organis\'{e} en quatre couches ind\'{e}pendantes :
+
+\begin{center}
+\begin{tikzpicture}[
+  box/.style={rectangle, draw=accentblue, fill=rowblue,
+              minimum width=5cm, minimum height=0.75cm,
+              text centered, font=\small\bfseries, rounded corners=2pt},
+  sbox/.style={rectangle, draw=successgreen!80, fill=rowgreen,
+               minimum width=2.3cm, minimum height=0.7cm,
+               text centered, font=\small, rounded corners=2pt},
+  arr/.style={->, >=Stealth, thick, color=darkgray},
+  lbl/.style={font=\footnotesize\color{darkgray}}
+]
+  \node[box] (front)  at (0, 0)    {Couche Pr\'{e}sentation -- Widget.js / index.html};
+  \node[box] (api)    at (0, -1.6) {Couche API -- Flask (server.py)};
+  \node[box] (rag)    at (0, -3.2) {Couche RAG -- Pipeline (legal\_rag/)};
+  \node[sbox](chroma) at (-2.5,-4.9){ChromaDB};
+  \node[sbox](ollama) at ( 2.5,-4.9){Ollama};
+
+  \draw[arr] (front)  -- node[lbl,right]{POST /ask (JSON + session\_id)} (api);
+  \draw[arr] (api)    -- node[lbl,right]{search() + stream\_answer()} (rag);
+  \draw[arr] (rag)    -- node[lbl,above left]{query embedding} (chroma);
+  \draw[arr] (chroma) -- node[lbl,below left]{chunks + distances} (rag);
+  \draw[arr] (rag)    -- node[lbl,above right]{prompt + contexte} (ollama);
+  \draw[arr] (ollama) -- node[lbl,below right]{tokens SSE} (rag);
+  \draw[arr] (rag)    to[bend left=25] node[lbl,left]{stream SSE} (api);
+  \draw[arr] (api)    to[bend left=25] node[lbl,left]{tokens + sources} (front);
+\end{tikzpicture}
+\end{center}
+
+\section{Diagramme de s\'{e}quence -- Traitement d'une requ\^{e}te}
+
+Le tableau suivant d\'{e}crit le flux complet d'une question de l'utilisateur \`{a} la r\'{e}ponse finale :
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\linewidth}{>{\small\bfseries}p{0.4cm} p{2.2cm} >{\small\ttfamily}p{3.5cm} X}
+  \toprule
+  \rowcolor{rowblue}
+  \textbf{\#} & \textbf{Acteur} & \textbf{Action} & \textbf{Description} \\
+  \midrule
+  1 & Utilisateur      & saisit question     & L'utilisateur tape sa question dans le widget \\
+  2 & Widget.js        & POST /ask           & Envoi JSON \{query, session\_id, key\} au serveur Flask \\
+  3 & Flask            & rewrite\_query()    & Reformulation si question de suivi (appel Ollama) \\
+  4 & Flask            & pipeline.search()   & Recherche hybride dans ChromaDB (dense + keyword) \\
+  5 & ChromaDB         & retourne chunks     & Top-12 chunks triés par distance L2 \\
+  6 & Flask            & build\_context()    & Filtre les chunks (distance $\leq$ 0.9), formate le contexte \\
+  7 & Flask            & stream\_answer()    & Construction du prompt RAG + appel Ollama en streaming \\
+  8 & Ollama           & yield token         & Génère la réponse token par token (temperature=0.0) \\
+  9 & Flask            & SSE yield           & Transmet chaque token via Server-Sent Events \\
+  10 & Widget.js       & affiche token       & Mise à jour progressive de la bulle de réponse \\
+  11 & Flask           & done + sources      & Fin du stream, envoi des sources citables \\
+  12 & Widget.js       & affiche sources     & Puces cliquables sous la réponse \\
+  \bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Strat\'{e}gies de d\'{e}coupage (Chunking)}
+
+Le choix de la strat\'{e}gie de d\'{e}coupage est d\'{e}terminant pour la qualit\'{e} du retrieval.
+Trois approches ont \'{e}t\'{e} impl\'{e}ment\'{e}es, chacune adapt\'{e}e \`{a} un type de contenu :
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{\linewidth}{>{\bfseries}p{3.2cm} X X}
+  \toprule
+  \rowcolor{rowblue}
+  \textbf{Strat\'{e}gie} & \textbf{StructuralChunker} & \textbf{MarkdownChunker} \\
+  \midrule
+  Principe de d\'{e}coupe & Paragraphes (\textbackslash n\textbackslash n) avec fusion intelligente & Titres Markdown (\#\#) issus de Docling \\
+  Chevauchement & 400 caract\`{e}res (2 phrases) & 0 (fronti\`{e}res s\'{e}mantiques nettes) \\
+  Taille max & 2\,000 caract\`{e}res & 2\,000 caract\`{e}res \\
+  Taille min & 300 caract\`{e}res & 100 caract\`{e}res \\
+  Corpus cible & PDF texte brut, XML, JSON & Brochures touristiques (Docling) \\
+  Avantage & Robuste sur tout type de texte & Chaque h\^{o}tel/activit\'{e} = 1 chunk \\
+  \bottomrule
+\end{tabularx}
+\end{center}
+
+\vspace{0.5em}
+\begin{notebox}
+\textbf{Strat\'{e}gie Parent-Document Retriever :} une troisi\`{e}me strat\'{e}gie optionnelle
+utilise deux collections ChromaDB -- des \og{}enfants\fg{} (800 chars, recherch\'{e}s par embedding)
+et des \og{}parents\fg{} (2\,500 chars, envoy\'{e}s au LLM). Cette approche r\'{e}sout le
+\textit{trilemme du chunking} : pr\'{e}cision de recherche ET richesse de contexte.
+\end{notebox}
+
+\section{Cahier des charges -- Exigences fonctionnelles et non-fonctionnelles}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\linewidth}{>{\bfseries\small}p{0.6cm} >{\bfseries}p{4cm} X p{2.5cm}}
+  \toprule
+  \rowcolor{rowblue}
+  \textbf{ID} & \textbf{Exigence} & \textbf{Description} & \textbf{Statut} \\
+  \midrule
+  \rowcolor{rowgreen!50}
+  F1 & R\'{e}ponse en langage naturel & L'assistant r\'{e}pond en fran\c{c}ais \`{a} partir du corpus & \textcolor{successgreen}{\textbf{Impl\'{e}ment\'{e}}} \\
+  \rowcolor{rowgreen!50}
+  F2 & Sources cit\'{e}es & Chaque r\'{e}ponse indique les documents sources & \textcolor{successgreen}{\textbf{Impl\'{e}ment\'{e}}} \\
+  \rowcolor{rowgreen!50}
+  F3 & Streaming temps r\'{e}el & Affichage progressif token par token & \textcolor{successgreen}{\textbf{Impl\'{e}ment\'{e}}} \\
+  \rowcolor{rowgreen!50}
+  F4 & Widget int\'{e}grable & Script JS embarquable sur tout site & \textcolor{successgreen}{\textbf{Impl\'{e}ment\'{e}}} \\
+  \rowcolor{rowgreen!50}
+  F5 & Multi-client & Clés API distinctes, corpus s\'{e}par\'{e}s & \textcolor{successgreen}{\textbf{Impl\'{e}ment\'{e}}} \\
+  \rowcolor{warnorange!20}
+  F6 & Historique conversation & Contexte des 3 derniers \'{e}changes & \textcolor{warnorange}{\textbf{Partiel}} \\
+  \midrule
+  \rowcolor{rowgreen!50}
+  NF1 & D\'{e}ploiement 100\% local & Z\'{e}ro appel cloud en production & \textcolor{successgreen}{\textbf{Impl\'{e}ment\'{e}}} \\
+  \rowcolor{rowgreen!50}
+  NF2 & Temps de r\'{e}ponse $<$ 3s & Premier token en moins de 3 secondes & \textcolor{successgreen}{\textbf{Impl\'{e}ment\'{e}}} \\
+  \rowcolor{rowgreen!50}
+  NF3 & Anti-hallucination & Refus si aucun passage pertinent & \textcolor{successgreen}{\textbf{Impl\'{e}ment\'{e}}} \\
+  \rowcolor{rowred!50}
+  NF4 & \'{E}valuation automatique & M\'{e}triques Ragas (faithfulness, precision) & \textcolor{alertred}{\textbf{En cours}} \\
+  \bottomrule
+\end{tabularx}
+\end{center}
+
+% ============================================================
+\chapter{Code produit -- Exemples comment\'{e}s}
+
+\section{Contexte g\'{e}n\'{e}ral}
+
+Les quatre fichiers pr\'{e}sent\'{e}s dans ce chapitre constituent le c\oe{}ur technique du syst\`{e}me.
+Ils illustrent les d\'{e}cisions de conception valid\'{e}es avec le ma\^{i}tre de stage.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{p{0.5cm} >{\ttfamily}p{3.5cm} p{8.5cm}}
+  \toprule
+  \rowcolor{rowblue}
+  \textbf{N\textdegree} & \textbf{Fichier} & \textbf{R\^{o}le} \\
+  \midrule
+  1 & legal\_rag/pipeline.py   & Orchestration de l'ingestion -- s\'{e}lection dynamique du chunker \\
+  2 & legal\_rag/generation.py & Construction du prompt RAG et g\'{e}n\'{e}ration en streaming \\
+  3 & server.py                & Route Flask \texttt{/ask} avec Server-Sent Events \\
+  4 & static/widget.js         & Client JavaScript -- envoi de requ\^{e}te et lecture du stream \\
+  \bottomrule
+\end{tabular}
+\end{center}
+
+% ============================================================
+\section{pipeline.py -- S\'{e}lection de la strat\'{e}gie de chunking}
+
+\subsection{Contexte et r\^{o}le}
+
+\texttt{IngestionPipeline} est le point d'entr\'{e}e de l'ingestion documentaire. Son constructeur
+illustre la \textbf{strat\'{e}gie de s\'{e}lection dynamique} du chunker selon le mode d'extraction PDF
+configur\'{e}, ainsi que le choix de la strat\'{e}gie d'indexation (recursive vs. parent-child).
+
+\subsection{Code comment\'{e}}
+
+\begin{lstlisting}[language=Python, caption={pipeline.py -- Constructeur d'IngestionPipeline}]
+class IngestionPipeline:
+    """Pipeline complet d'ingestion pour tout type de corpus."""
+
+    def __init__(self, collection_name: str = "legal_corpus_m2_tp",
+                 retriever_type: str = "recursive"):
+        self.retriever_type = retriever_type
+        self.collection_name = collection_name
+
+        # Si PDF_MODE produit du Markdown structure (docling, pymupdf4llm),
+        # on utilise MarkdownChunker qui decoupe sur les titres ##.
+        # Chaque section "## Hotel Le Paradis" devient un chunk autonome.
+        # Si PDF_MODE produit du texte brut, on utilise StructuralChunker
+        # qui decoupe par paragraphes avec un chevauchement de 400 chars.
+        if PDF_MODE in ("docling", "markdown"):
+            self.chunker = MarkdownChunker(
+                max_chunk_size=MAX_CHUNK_SIZE,  # 2 000 caracteres par chunk
+                min_chunk_size=100,             # Evite les titres sans contenu
+                overlap=0                        # Frontiere semantique nette sur ##
+            )
+        else:
+            self.chunker = StructuralChunker(
+                max_chunk_size=MAX_CHUNK_SIZE,
+                min_chunk_size=300,
+                overlap=400  # 400 chars = ~2 phrases pour preserver le contexte
+            )
+
+        # Choix de la strategie d'indexation/retrieval
+        # "parent-child" : 2 collections (enfants pour recherche, parents pour LLM)
+        # "recursive"    : 1 collection, retrieval direct (defaut)
+        if self.retriever_type == "parent-child":
+            self.parent_retriever = ParentDocumentRetriever(
+                collection_name_children=f"{collection_name}_children",
+                collection_name_parents=f"{collection_name}_parents"
+            )
+        else:
+            # Mode recursif : une seule collection ChromaDB persistante
+            self.indexer = CorpusIndexer(collection_name=collection_name)
+\end{lstlisting}
+
+\textbf{Explication :} La s\'{e}lection conditionnelle du chunker est un \textbf{pattern Strategy}
+simplifi\'{e} : le comportement de d\'{e}coupage est encapsul\'{e} dans deux classes interchangeables.
+Cette approche permet de changer de strat\'{e}gie d'extraction (et donc de chunking) en modifiant
+une seule variable \texttt{PDF\_MODE} dans \texttt{config.py}, sans toucher au reste du pipeline.
+Le chevauchement de 400 caract\`{e}res dans \texttt{StructuralChunker} correspond \`{a} environ
+deux phrases, ce qui garantit que le contexte d'une phrase coup\'{e}e \`{a} la fronti\`{e}re d'un chunk
+est pr\'{e}sent dans le chunk suivant.
+
+% ============================================================
+\section{generation.py -- Prompt RAG et streaming}
+
+\subsection{Contexte et r\^{o}le}
+
+\texttt{AnswerGenerator} encapsule toute la logique de g\'{e}n\'{e}ration. Deux m\'{e}thodes sont
+pr\'{e}sent\'{e}es : \texttt{build\_prompt()} qui construit le prompt syst\`{e}me inject\'{e} avec le
+contexte retrieval, et \texttt{stream\_answer()} qui appelle Ollama en mode streaming.
+
+\subsection{Code comment\'{e} -- Construction du prompt}
+
+\begin{lstlisting}[language=Python, caption={generation.py -- build\_prompt() : injection du contexte RAG}]
+def build_prompt(self, query: str, results: dict) -> str:
+    """Construit le prompt complet envoye au LLM."""
+
+    # Construit le contexte a partir des chunks recuperes par ChromaDB.
+    # _build_context() filtre les chunks trop eloignes (distance > MAX_DISTANCE)
+    # et formate chaque passage avec sa source.
+    context = self._build_context(results)
+
+    # Si aucun passage pertinent n'a ete trouve, on refuse de repondre.
+    # Cela evite que le LLM "invente" une reponse sans source.
+    if not context:
+        return ""
+
+    # Construction du prompt final en trois parties :
+    # 1. Instruction systeme (personnalite du domaine)
+    # 2. Passages recuperes (contexte RAG)
+    # 3. Question de l'utilisateur
+    return f"""{self.system_intro}
+
+Regles strictes :
+- Reponds UNIQUEMENT a ce qui est demande, de facon courte et directe.
+- Utilise SEULEMENT les passages qui repondent precisement a la question.
+- Ne cite jamais les sources dans ta reponse, elles sont affichees separement.
+- Si l'information est absente : "Je n'ai pas cette information dans les documents."
+- Jamais de connaissance generale, jamais d'invention.
+
+PASSAGES :
+{context}
+
+QUESTION : {query}
+REPONSE (courte et directe) :"""
+\end{lstlisting}
+
+\subsection{Code comment\'{e} -- Streaming token par token}
+
+\begin{lstlisting}[language=Python, caption={generation.py -- stream\_answer() : generation en streaming}]
+def stream_answer(self, query: str, results: dict, history: list = None):
+    """Genere la reponse token par token via Ollama (generateur Python)."""
+
+    prompt = self.build_prompt(query, results)
+    if not prompt:
+        return  # Stoppe si aucun contexte pertinent
+
+    # Construction du contexte de conversation (historique des 3 derniers echanges).
+    # Le message systeme definit la personnalite de l'assistant.
+    messages = [{"role": "system", "content": self.system_intro}]
+    for msg in (history or []):
+        messages.append({"role": msg["role"], "content": msg["content"]})
+    messages.append({"role": "user", "content": prompt})
+
+    # Appel Ollama en mode streaming (stream=True).
+    # temperature=0.0 assure des reponses deterministes et reproductibles.
+    # C'est critique pour un assistant factuel : on ne veut pas de variabilite.
+    stream = ollama.chat(
+        model=self.model,
+        messages=messages,
+        stream=True,
+        options={"temperature": 0.0}
+    )
+
+    # Yield chaque token au fur et a mesure de la generation.
+    # Flask transmettra ces tokens via Server-Sent Events au client.
+    for chunk in stream:
+        token = chunk.message.content
+        if token:
+            yield token
+\end{lstlisting}
+
+\textbf{Explication :} La fonction \texttt{stream\_answer()} est un \textbf{g\'{e}n\'{e}rateur Python}
+(utilisant \texttt{yield}). Cela permet \`{a} Flask de transmettre chaque token au client
+imm\'{e}diatement, sans attendre la fin de la g\'{e}n\'{e}ration. L'utilisateur voit ainsi la
+r\'{e}ponse appara\^{i}tre progressivement, ce qui am\'{e}liore consid\'{e}rablement l'exp\'{e}rience
+ressentie. La valeur \texttt{temperature=0.0} est fondamentale : elle rend les r\'{e}ponses
+d\'{e}terministes (toujours la m\^{e}me r\'{e}ponse pour la m\^{e}me question et le m\^{e}me contexte),
+ce qui est essentiel pour un assistant factuel bas\'{e} sur des documents touristiques.
+
+% ============================================================
+\section{server.py -- Route /ask et Server-Sent Events}
+
+\subsection{Contexte et r\^{o}le}
+
+La route \texttt{/ask} est le \textbf{point d'entr\'{e}e principal} de l'API. Elle orchestre
+l'ensemble du pipeline RAG (reformulation, recherche, g\'{e}n\'{e}ration) et utilise le protocole
+\textbf{Server-Sent Events (SSE)} pour transmettre la r\'{e}ponse au client en temps r\'{e}el.
+
+\subsection{Code comment\'{e}}
+
+\begin{lstlisting}[language=Python, caption={server.py -- Route /ask avec streaming SSE}]
+@app.route("/ask", methods=["POST"])
+def ask():
+    data       = request.json or {}
+    query      = data.get("query", "").strip()
+    api_key    = data.get("key", "")
+    session_id = data.get("session_id", "")
+
+    if not query:
+        return jsonify({"error": "Question vide"}), 400
+
+    # Multi-client : chaque cle API pointe vers une collection ChromaDB distincte.
+    # Un client sans cle utilise le pipeline local par defaut.
+    if api_key and api_key not in CLIENTS:
+        return jsonify({"error": "Cle API invalide"}), 403
+
+    active_pipeline = PIPELINES.get(api_key, LOCAL_PIPELINE)
+
+    # Recuperation des 6 derniers messages de la session (3 echanges max).
+    history = get_history(session_id) if session_id else []
+
+    # Reformulation intelligente des questions de suivi :
+    # "et lui ?" -> "Quels sont les horaires de l'hotel Sampiero ?"
+    search_query = generator.rewrite_query(query, history)
+    results = active_pipeline.search(query=search_query, n_results=12)
+
+    no_ids = not results or not results.get("ids") or not results["ids"][0]
+    if no_ids:
+        def no_res():
+            yield f"data: {json.dumps({'error': 'no_results'})}\n\n"
+        return Response(stream_with_context(no_res()), mimetype="text/event-stream")
+
+    context = generator.build_context(results)
+    if not context:
+        def no_ctx():
+            yield f"data: {json.dumps({'error': 'no_context'})}\n\n"
+        return Response(stream_with_context(no_ctx()), mimetype="text/event-stream")
+
+    # Preparation des sources citables (fichiers locaux ou URLs web).
+    # Deduplication par nom de fichier, filtrage par MAX_DISTANCE.
+    sources = []
+    seen = set()
+    distances = results.get("distances", [[]])[0]
+    for i, meta in enumerate(results["metadatas"][0]):
+        dist = distances[i] if i < len(distances) else None
+        if dist is not None and dist > MAX_DISTANCE:
+            continue  # Chunk trop eloigne semantiquement : on ne le cite pas
+        raw = meta.get("source_file", "")
+        source_type = meta.get("source_type", "")
+        filename = raw.split("/")[-1].split("\\")[-1] or raw or "source"
+        url = raw if source_type == "web" else f"/documents/local/{filename}"
+        if filename in seen:
+            continue
+        seen.add(filename)
+        sources.append({"label": filename, "url": url, "dist": round(dist, 2)})
+
+    def generate():
+        full = ""
+        # Stream chaque token de la reponse vers le client
+        for token in generator.stream_answer(query, results, history=history):
+            full += token
+            # Format SSE : "data: {json}\n\n"
+            yield f"data: {json.dumps({'token': token})}\n\n"
+        # Fin du stream : envoi des sources et sauvegarde en session
+        show_sources = sources if "je n'ai pas cette information" not in full.lower() else []
+        if session_id and show_sources:
+            save_exchange(session_id, query, full)
+        yield f"data: {json.dumps({'done': True, 'sources': show_sources})}\n\n"
+
+    # mimetype="text/event-stream" signale au navigateur qu'il s'agit de SSE.
+    # stream_with_context() preserves le contexte Flask pendant le streaming.
+    return Response(stream_with_context(generate()), mimetype="text/event-stream")
+\end{lstlisting}
+
+\textbf{Explication :} Le protocole \textbf{Server-Sent Events (SSE)} est pr\'{e}f\'{e}r\'{e} aux
+WebSockets pour ce cas d'usage car il est unidirectionnel (serveur vers client),
+plus simple \`{a} impl\'{e}menter avec Flask, et nativement support\'{e} par les navigateurs
+modernes sans biblioth\`{e}que suppl\'{e}mentaire. Chaque \'{e}v\'{e}nement SSE a le format
+\texttt{data: \{json\}{\textbackslash}n{\textbackslash}n}. Deux types de messages sont envoy\'{e}s :
+\texttt{\{"token": "..."\}} pendant la g\'{e}n\'{e}ration, et
+\texttt{\{"done": true, "sources": [...]\}} \`{a} la fin. La condition sur
+\texttt{"je n'ai pas cette information"} \'{e}vite d'afficher des sources quand l'assistant
+reconn\^{a}it lui-m\^{e}me qu'il ne peut pas r\'{e}pondre.
+
+% ============================================================
+\section{widget.js -- Envoi de requ\^{e}te et lecture du stream}
+
+\subsection{Contexte et r\^{o}le}
+
+\texttt{widget.js} est un script JavaScript auto-ex\'{e}cutant (\textit{IIFE -- Immediately
+Invoked Function Expression}) inject\'{e} sur n'importe quelle page cliente via une balise
+\texttt{<script>}. La fonction \texttt{sendQuery()} g\`{e}re l'envoi de la requ\^{e}te,
+la lecture du stream SSE, et l'affichage progressif de la r\'{e}ponse.
+
+\subsection{Code comment\'{e}}
+
+\begin{lstlisting}[language=JavaScript, caption={widget.js -- sendQuery() avec AbortController et lecture SSE}]
+async function sendQuery() {
+  // Si une generation est deja en cours, on l'interrompt immediatement.
+  // L'AbortController permet d'annuler le fetch cote client.
+  // Cela evite les doublons si l'utilisateur clique trop vite.
+  if (abortCtrl) { abortCtrl.abort(); return; }
+
+  const q = inputEl.value.trim();
+  if (!q) return;
+
+  addBubble("user").textContent = q;  // Bulle utilisateur, affichage immediat
+  inputEl.value = "";
+  setStopMode(true);       // Remplace le bouton Envoyer par un carre Stop
+  const typing = addTyping(); // Trois points animes pendant l'attente
+
+  abortCtrl = new AbortController(); // Cree un controleur d'annulation
+  try {
+    const res = await fetch(`${HOST}/ask`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      // SESSION_ID = crypto.randomUUID() genere une fois au chargement.
+      // Il permet au serveur de maintenir l'historique de conversation.
+      body: JSON.stringify({ query: q, key: API_KEY, session_id: SESSION_ID }),
+      signal: abortCtrl.signal  // Lie ce fetch a l'AbortController
+    });
+
+    typing.remove();
+    const bot = addBubble("bot");  // Bulle de reponse, initialement vide
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "", fullText = "";
+
+    // Boucle de lecture du stream SSE ligne par ligne
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      // Decode le chunk binaire en texte (stream: true = mode partiel)
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n"); buf = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue;  // Ignore les lignes vides
+        const data = JSON.parse(line.slice(5).trim());
+
+        if (data.token) {
+          // Ajout progressif du token a la bulle de reponse
+          fullText += data.token;
+          bot.textContent = fullText;
+          chat.scrollTop = chat.scrollHeight;  // Auto-scroll vers le bas
+        } else if (data.error) {
+          bot.className = "arb-bubble warn";
+          bot.textContent = "Je n'ai pas trouve d'information.";
+        } else if (data.done) {
+          // Fin du stream : affichage des sources comme puces cliquables
+          addSources(data.sources || []);
+        }
+      }
+    }
+  } catch (err) {
+    typing.remove();
+    // AbortError = arret volontaire par l'utilisateur : pas d'erreur a afficher.
+    // Toute autre erreur (reseau, serveur) est affichee en bulle d'avertissement.
+    if (err.name !== "AbortError") {
+      addBubble("warn").textContent = "Erreur de connexion.";
+    }
+  }
+  abortCtrl = null;
+  setStopMode(false);  // Retour au bouton Envoyer normal
+  inputEl.focus();
+}
+\end{lstlisting}
+
+\textbf{Explication :} L'utilisation de \texttt{AbortController} est une d\'{e}cision technique
+importante : elle permet \`{a} l'utilisateur d'interrompre une g\'{e}n\'{e}ration longue en cliquant
+sur le bouton Stop (carr\'{e} rouge). L'annulation du \texttt{fetch} envoie un signal
+\texttt{AbortError} que le bloc \texttt{catch} intercepte sans afficher d'erreur.
+Le texte d\'{e}j\`{a} affich\'{e} est conserv\'{e}, ce qui est plus agr\'{e}able que d'effacer la
+r\'{e}ponse partielle. La lecture ligne par ligne avec un buffer (\texttt{buf}) est n\'{e}cessaire
+car les chunks TCP re\c{c}us ne correspondent pas forc\'{e}ment aux \'{e}v\'{e}nements SSE :
+plusieurs tokens peuvent arriver dans un m\^{e}me chunk, ou un \'{e}v\'{e}nement peut \^{e}tre
+coup\'{e} en deux chunks successifs.
+
+% ============================================================
+\chapter{Synth\`{e}se technique -- D\'{e}cisions et justifications}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabularx}{\linewidth}{>{\bfseries}p{3.5cm} X p{2.5cm}}
+  \toprule
+  \rowcolor{rowblue}
+  \textbf{D\'{e}cision} & \textbf{Justification} & \textbf{Fichier} \\
+  \midrule
+  ChromaDB local & Seule BD vectorielle satisfaisant co\^{u}t z\'{e}ro + hors ligne + confidentialit\'{e} & config.py \\
+  Ollama + Mistral & Stack 100\% gratuit, offline, optimis\'{e} fran\c{c}ais & config.py \\
+  Docling en mode par d\'{e}faut & Meilleure pr\'{e}cision sur les brochures touristiques complexes & config.py \\
+  MarkdownChunker pour Docling & Pr\'{e}serve les entit\'{e}s s\'{e}mantiques (1 h\^{o}tel = 1 chunk) & pipeline.py \\
+  Cascade de fallbacks PDF & Robustesse face \`{a} la diversit\'{e} des documents & loaders.py \\
+  Recherche hybride dense+keyword & Combine pr\'{e}cision s\'{e}mantique et correspondance exacte des noms & indexing.py \\
+  temperature=0.0 & R\'{e}ponses d\'{e}terministes, essentielles pour un assistant factuel & generation.py \\
+  Streaming SSE & Exp\'{e}rience utilisateur progressive, pas d'attente & server.py \\
+  AbortController JS & Interruptibilit\'{e} de la g\'{e}n\'{e}ration par l'utilisateur & widget.js \\
+  IIFE widget & Auto-contenu, int\'{e}grable sur tout site sans d\'{e}pendances & widget.js \\
+  \bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Points d'am\'{e}lioration identifi\'{e}s}
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Passage \`{a} Llama 3 ou Phi-3} : des tests pr\'{e}liminaires sugg\`{e}rent
+        que Llama 3 (8B) produit des r\'{e}ponses plus d\'{e}taill\'{e}es en fran\c{c}ais.
+        Une \'{e}valuation comparative via Ragas est planifi\'{e}e en S16.
+  \item \textbf{Cache de r\'{e}ponses} : les questions fr\'{e}quentes (horaires, tarifs standards)
+        pourraient \^{e}tre mises en cache pour r\'{e}duire la latence et la charge sur Ollama.
+  \item \textbf{Persistance des sessions} : les sessions en m\'{e}moire sont perdues au red\'{e}marrage.
+        Un stockage SQLite l\'{e}ger am\'{e}liorerait la continuit\'{e} pour les sessions longues.
+\end{enumerate}
+
+% ============================================================
+\chapter{Bilan hebdomadaire -- Semaines 11 \`{a} 15}
+
+\section{Semaine 11 (29 avril -- 5 mai) -- Initialisation}
+\begin{infobox}
+\textbf{Th\`{e}me} : Analyse des besoins, choix des technologies, mise en place de l'environnement
+de d\'{e}veloppement (Ollama, ChromaDB, Flask, Docling).
+\end{infobox}
+\begin{itemize}[leftmargin=*]
+  \item R\'{e}union avec le ma\^{i}tre de stage pour d\'{e}finir le p\'{e}rim\`{e}tre du projet.
+  \item Installation et test des technologies candidates (Ollama, ChromaDB, PDFPlumber, Docling).
+  \item Premier prototype de pipeline d'ingestion avec un PDF touristique test.
+  \item Mise en place de la structure du projet (\texttt{legal\_rag/}, \texttt{server.py}).
+\end{itemize}
+
+\section{Semaine 12 (6 -- 12 mai) -- Loaders et chunking}
+\begin{infobox}
+\textbf{Th\`{e}me} : D\'{e}veloppement des 7 modes d'extraction PDF, impl\'{e}mentation de
+StructuralChunker et MarkdownChunker.
+\end{infobox}
+\begin{itemize}[leftmargin=*]
+  \item Impl\'{e}mentation de PDFLoader avec support des modes : docling, markdown, pdfplumber,
+        hybrid, ocr, vision, pymupdf.
+  \item D\'{e}veloppement de StructuralChunker (d\'{e}coupage par paragraphes) et MarkdownChunker
+        (d\'{e}coupage sur les titres \#\#).
+  \item Probl\`{e}me identifi\'{e} : les prix flottants dans les brochures Docling se retrouvaient
+        d\'{e}tach\'{e}s de leur h\^{o}tel. Solution : algorithme de redistribution par heuristique.
+  \item Tests d'ingestion sur le corpus tourisme Centre-Corse (brochures h\'{e}bergement).
+\end{itemize}
+
+\section{Semaine 13 (13 -- 19 mai) -- Retrieval et scraping web}
+\begin{infobox}
+\textbf{Th\`{e}me} : Pipeline de retrieval hybride (dense + keyword), scraping du site
+\texttt{tourisme-centrecorse.corsica}, mode WEB\_MODE separate/mixed.
+\end{infobox}
+\begin{itemize}[leftmargin=*]
+  \item Impl\'{e}mentation de la recherche hybride : embedding dense + keyword sur entit\'{e}s nomm\'{e}es.
+  \item D\'{e}veloppement de WebLoader avec parsing sitemap.xml et extraction schema.org.
+  \item Impl\'{e}mentation des modes WEB\_MODE (\texttt{separate} : docs en priorit\'{e} avec fallback web ;
+        \texttt{mixed} : fusion des deux sources).
+  \item Analyse du comportement des deux modes sur des questions test (comparatif doc\'{e}s).
+\end{itemize}
+
+\section{Semaine 14 (20 -- 26 mai) -- Serveur et frontend}
+\begin{infobox}
+\textbf{Th\`{e}me} : Serveur Flask avec streaming SSE, widget JS int\'{e}grable, interface
+standalone avec design Figma.
+\end{infobox}
+\begin{itemize}[leftmargin=*]
+  \item Impl\'{e}mentation de la route \texttt{/ask} avec Server-Sent Events et gestion des sessions.
+  \item D\'{e}veloppement du widget JavaScript int\'{e}grable (\texttt{widget.js}) avec
+        FAB, streaming SSE, AbortController, et bouton stop.
+  \item Impl\'{e}mentation de l'interface standalone (\texttt{index.html}) selon la maquette
+        Figma : widget flottant, mode plein \'{e}cran, responsive mobile.
+  \item Int\'{e}gration du syst\`{e}me multi-client avec clés API distinctes (\texttt{clients.py}).
+\end{itemize}
+
+\section{Semaine 15 (27 mai -- 5 juin) -- Tests et \'{e}valuation}
+\begin{infobox}
+\textbf{Th\`{e}me} : Tests fonctionnels, \'{e}valuation qualitative avec tableau Word, r\'{e}glage
+des param\`{e}tres RAG (MAX\_DISTANCE, n\_results, WEB\_MODE).
+\end{infobox}
+\begin{itemize}[leftmargin=*]
+  \item Cr\'{e}ation du tableau d'\'{e}valuation Word (\texttt{evaluation\_rag.docx}) pour noter
+        les r\'{e}sultats selon diff\'{e}rentes configurations de param\`{e}tres.
+  \item Tests sur 8 configurations : variations de \texttt{n\_results} (4, 8, 12),
+        \texttt{max\_distance} (0.6, 0.9, 1.2), mod\`{e}le (mistral, llama3), retriever.
+  \item Analyse des divergences entre les modes \texttt{separate} et \texttt{mixed}
+        (certaines questions obtiennent des r\'{e}ponses dans un mode mais pas l'autre).
+  \item Configuration finale retenue : \texttt{n\_results=12}, \texttt{max\_distance=0.9},
+        \texttt{PDF\_MODE=docling}, \texttt{WEB\_MODE=mixed}.
+\end{itemize}
+
+% ==================== APPENDIX ====================
+\appendix
+\chapter*{Annexes}
+\addcontentsline{toc}{chapter}{Annexes}
+
+\section*{A. Stack technologique complet}
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\linewidth}{>{\ttfamily}p{3.5cm} p{2cm} X}
+  \toprule
+  \rowcolor{rowblue}
+  \textbf{Package} & \textbf{Version} & \textbf{R\^{o}le dans le projet} \\
+  \midrule
+  flask        & 3.x   & Serveur REST, routes API, streaming SSE \\
+  flask-cors   & 4.x   & Autorisation des appels depuis d'autres domaines \\
+  chromadb     & 0.5.x & Base de donn\'{e}es vectorielle locale persistante \\
+  ollama       & 0.2.x & Client Python pour Ollama (embeddings + g\'{e}n\'{e}ration) \\
+  pymupdf      & 1.24.x& Extraction texte PDF (mode pymupdf et hybrid) \\
+  pymupdf4llm  & 0.0.x & Conversion PDF vers Markdown structur\'{e} \\
+  docling      & 2.x   & Extraction layout PDF par deep learning (IBM) \\
+  pdfplumber   & 0.11.x& Extraction de tableaux et colonnes PDF \\
+  pytesseract  & 0.3.x & OCR Tesseract pour les PDFs scann\'{e}s \\
+  beautifulsoup4 & 4.x & Extraction de contenu web (scraping) \\
+  requests     & 2.x   & Appels HTTP pour le scraping web \\
+  ragas        & 0.1.x & \'{E}valuation automatique du pipeline RAG \\
+  \bottomrule
+\end{tabularx}
+\end{center}
+
+\section*{B. R\'{e}f\'{e}rences}
+\begin{itemize}[leftmargin=*]
+  \item Lewis et al. (2020). \textit{Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks}.
+        \url{https://arxiv.org/abs/2005.11401}
+  \item ChromaDB -- Documentation officielle : \url{https://docs.trychroma.com}
+  \item Ollama -- Documentation officielle : \url{https://ollama.com/docs}
+  \item IBM Docling : \url{https://github.com/DS4SD/docling}
+  \item Ragas -- \'{E}valuation RAG : \url{https://docs.ragas.io}
+  \item Flask -- Server-Sent Events : \url{https://flask.palletsprojects.com/en/stable/patterns/streaming/}
+\end{itemize}
+
+\end{document}

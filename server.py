@@ -213,15 +213,12 @@ def ask():
         source_type = meta.get("source_type", "")
         filename = raw.split("/")[-1].split("\\")[-1] or raw or "source"
         print(f"   🗂️  source_file={raw!r}  filename={filename!r}  type={source_type!r}")
-        if source_type == "web":
-            url = raw
-        else:
-            client_key = api_key if api_key else "local"
-            url = f"/documents/{client_key}/{filename}"
-        if filename in seen:
+        if source_type != "web":
+            continue  # PDFs restent confidentiels : non transmis au client
+        if raw in seen:
             continue
-        seen.add(filename)
-        sources.append({"label": filename, "url": url, "dist": round(dist, 2) if dist is not None else None})
+        seen.add(raw)
+        sources.append({"label": filename, "url": raw, "dist": round(dist, 2) if dist is not None else None})
 
     NO_INFO = "je n'ai pas cette information"
 

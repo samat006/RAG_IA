@@ -32,6 +32,17 @@ WEB_SOURCES = [
 # Nombre max de pages à scraper par site. None = pas de limite.
 WEB_MAX_PAGES = None
 
+# URLs à exclure de l'indexation web (correspondance par sous-chaîne).
+# Exemples :
+#   "/contact"        → exclut toutes les pages dont l'URL contient "/contact"
+#   "/mentions-legales" → exclut cette page précise
+#   "?page="          → exclut les pages de pagination
+WEB_EXCLUDED_URLS: list = [
+    # "/contact",
+    # "/mentions-legales",
+    # "/politique-de-confidentialite",
+]
+
 # WEB_MODE : comportement quand documents ET web sont disponibles
 # "separate" : cherche d'abord dans les documents locaux ;
 #              si rien de pertinent → cherche sur le web.

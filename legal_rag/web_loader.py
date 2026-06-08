@@ -14,7 +14,7 @@ from typing import Dict, Any, List
 import requests
 from bs4 import BeautifulSoup
 
-from .config import DOMAIN
+from .config import DOMAIN, WEB_EXCLUDED_URLS
 from .models import DocumentMetadata
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; RAG-bot/1.0; educational project)"}
@@ -60,12 +60,17 @@ class WebLoader:
     # ─────────────────────────────────────────────────────────────
     # DÉCOUVERTE DES URLs (sitemap ou liens de la page d'accueil)
     # ─────────────────────────────────────────────────────────────
+    def _is_excluded(self, url: str) -> bool:
+        return any(pattern in url for pattern in WEB_EXCLUDED_URLS if pattern)
+
     def _discover_urls(self) -> List[str]:
         for path in ["/sitemap_index.xml", "/sitemap.xml"]:
             urls = self._parse_sitemap(self.base_url + path)
             if urls:
+                urls = [u for u in urls if not self._is_excluded(u)]
                 return urls
-        return self._crawl_homepage()
+        urls = self._crawl_homepage()
+        return [u for u in urls if not self._is_excluded(u)]
 
     def _parse_sitemap(self, sitemap_url: str) -> List[str]:
         try:
