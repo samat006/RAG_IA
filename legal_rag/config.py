@@ -47,8 +47,9 @@ WEB_EXCLUDED_URLS: list = [
 # "separate" : cherche d'abord dans les documents locaux ;
 #              si rien de pertinent → cherche sur le web.
 #              Cite toujours la source. Refuse de répondre sans source.
-# "mixed"    : fusionne les résultats documents + web avant de répondre.
-WEB_MODE = "separate"
+# "mixed"    : fusionne les résultats documents + web avant de répondre,
+#              triés par distance — le meilleur résultat gagne quel que soit le type.
+WEB_MODE = "mixed"
 
 # Seuil de distance en dessous duquel on considère qu'un document répond
 # (mode "separate"). Si tous les résultats sont au-dessus → bascule sur le web.
