@@ -38,6 +38,11 @@ WEB_MAX_PAGES = None
 #   "/mentions-legales" → exclut cette page précise
 #   "?page="          → exclut les pages de pagination
 WEB_EXCLUDED_URLS: list = [
+    "/transport",
+     "/tag",
+     "/type",
+     "/category",
+     "/classification",
     # "/contact",
     # "/mentions-legales",
     # "/politique-de-confidentialite",
@@ -47,8 +52,7 @@ WEB_EXCLUDED_URLS: list = [
 # "separate" : cherche d'abord dans les documents locaux ;
 #              si rien de pertinent → cherche sur le web.
 #              Cite toujours la source. Refuse de répondre sans source.
-# "mixed"    : fusionne les résultats documents + web avant de répondre,
-#              triés par distance — le meilleur résultat gagne quel que soit le type.
+# "mixed"    : fusionne les résultats documents + web avant de répondre.
 WEB_MODE = "mixed"
 
 # Seuil de distance en dessous duquel on considère qu'un document répond

@@ -46,7 +46,7 @@ Règles strictes :
 - Utilise SEULEMENT les passages qui répondent précisément à la question, ignore les autres.
 - Ne mélange pas plusieurs sujets dans la même réponse.
 - Si la question contient une faute de frappe, interprète-la intelligemment.
-- Ne cite jamais les sources dans ta réponse, elles sont affichées séparément.
+- Cite  les sources des URL interne  dans ta réponse, mais cite pas pdf.
 - Si l'information est absente des passages, réponds uniquement : "Je n'ai pas cette information dans les documents."
 - Jamais de connaissance générale, jamais d'invention.
 
