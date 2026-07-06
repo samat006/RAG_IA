@@ -2,10 +2,13 @@ import os
 import chromadb
 from chromadb.config import Settings
 
-# Modèles Ollama (local, 100% gratuit)
-# Prérequis : ollama pull nomic-embed-text && ollama pull phi3
-EMBED_MODEL = "nomic-embed-text"   # 768 dims, multilingue
-GENERATION_MODEL = os.environ.get("GENERATION_MODEL", "mistral")
+# Embedding local (Ollama) — inchangé
+EMBED_MODEL = "nomic-embed-text"
+
+# Génération via API Mistral
+# Modèles disponibles : mistral-small-latest, mistral-large-latest
+GENERATION_MODEL = os.environ.get("GENERATION_MODEL", "mistral-small-latest")
+MISTRAL_API_KEY  = os.environ.get("MISTRAL_API_KEY", "")
 
 # Domaine du corpus
 # Options : "legal", "municipal", "medical", "rh", "technique"
@@ -47,6 +50,9 @@ WEB_EXCLUDED_URLS: list = [
     # "/mentions-legales",
     # "/politique-de-confidentialite",
 ]
+
+# Nombre max de sources (URLs) renvoyées au client avec la réponse.
+SOURCES_MAX_COUNT = 3
 
 # WEB_MODE : comportement quand documents ET web sont disponibles
 # "separate" : cherche d'abord dans les documents locaux ;

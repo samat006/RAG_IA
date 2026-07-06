@@ -5,7 +5,9 @@
   const BTN_COLOR  = script ? script.getAttribute("data-btn-color")|| "#C8302A" : "#C8302A";
   const HOST       = script ? script.src.replace(/\/widget\.js.*$/, "") : window.location.origin;
   const TITLE      = script ? script.getAttribute("data-title")    || "Robbie" : "Robbie";
-  const SESSION_ID = crypto.randomUUID();
+  const SESSION_ID = (crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2) + Date.now().toString(36);
   let   abortCtrl  = null;
 
   /* ── CSS injecté ─────────────────────────────────────────────── */

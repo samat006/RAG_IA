@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify, render_template, Response, stream_wit
 from flask_cors import CORS
 from legal_rag.pipeline import IngestionPipeline
 from legal_rag.generation import AnswerGenerator
-from legal_rag.config import MAX_DISTANCE
+from legal_rag.config import MAX_DISTANCE, WEB_EXCLUDED_URLS, SOURCES_MAX_COUNT
 from clients import CLIENTS, LOCAL
 
 parser = argparse.ArgumentParser()
@@ -215,10 +215,14 @@ def ask():
         print(f"   🗂️  source_file={raw!r}  filename={filename!r}  type={source_type!r}")
         if source_type != "web":
             continue  # PDFs restent confidentiels : non transmis au client
+        if any(pattern in raw for pattern in WEB_EXCLUDED_URLS if pattern):
+            continue  # URL exclue (voir WEB_EXCLUDED_URLS)
         if raw in seen:
             continue
         seen.add(raw)
         sources.append({"label": filename, "url": raw, "dist": round(dist, 2) if dist is not None else None})
+        if len(sources) >= SOURCES_MAX_COUNT:
+            break
 
     NO_INFO = "je n'ai pas cette information"
 

@@ -421,7 +421,9 @@
 </div>
 
 <script>
-  const SESSION_ID = crypto.randomUUID();
+  const SESSION_ID = (crypto && crypto.randomUUID)
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2) + Date.now().toString(36);
   const widget   = document.getElementById("widget");
   const fab      = document.getElementById("fab");
   const input    = document.getElementById("input");
