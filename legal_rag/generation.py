@@ -1,6 +1,9 @@
 from typing import Dict
-from mistralai import Mistral
+import json
+import httpx
 from .config import GENERATION_MODEL, MISTRAL_API_KEY, DOMAIN, MAX_DISTANCE
+
+MISTRAL_URL = "https://api.mistral.ai/v1/chat/completions"
 
 DOMAIN_PROMPTS = {
     "legal":     "Tu es un assistant juridique expert. Réponds en te basant UNIQUEMENT sur les documents fournis.",
@@ -20,8 +23,17 @@ class AnswerGenerator:
         self.domain = DOMAIN
         self.model = GENERATION_MODEL
         self.system_intro = DOMAIN_PROMPTS.get(DOMAIN, DOMAIN_PROMPTS["tourisme"])
-        self.client = Mistral(api_key=MISTRAL_API_KEY)
+        self.headers = {
+            "Authorization": f"Bearer {MISTRAL_API_KEY}",
+            "Content-Type": "application/json",
+        }
         print(f"  🤖 Générateur initialisé — domaine : {DOMAIN.upper()} | modèle : {self.model}")
+
+    def _post(self, messages: list, stream: bool = False, max_tokens: int = None) -> httpx.Response:
+        payload = {"model": self.model, "messages": messages, "temperature": 0.0, "stream": stream}
+        if max_tokens:
+            payload["max_tokens"] = max_tokens
+        return httpx.post(MISTRAL_URL, headers=self.headers, json=payload, timeout=120)
 
     def build_context(self, results: Dict) -> str:
         return self._build_context(results)
@@ -56,21 +68,13 @@ RÉPONSE (courte et directe) :"""
             "RÈGLES STRICTES :\n"
             "- Si la question porte sur un sujet DIFFÉRENT de la conversation (changement de thème), "
             "retourne la question TELLE QUELLE sans modification.\n"
-            "- Reformule UNIQUEMENT si la question est une suite directe du même sujet "
-            "(ex: 'et lui ?', 'combien ?', 'pourquoi ?' en référence à ce qui précède).\n"
-            "- Ne mélange JAMAIS des entités, noms ou sujets de l'historique dans la nouvelle question "
-            "si elle porte sur un autre sujet.\n"
+            "- Reformule UNIQUEMENT si la question est une suite directe du même sujet.\n"
             "- Réponds UNIQUEMENT avec la question (reformulée ou originale), rien d'autre.\n\n"
             f"Conversation :\n{last}\n\nQuestion : {query}\nQuestion reformulée :"
         )
         try:
-            resp = self.client.chat.complete(
-                model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.0,
-                max_tokens=60,
-            )
-            rewritten = resp.choices[0].message.content.strip().split("\n")[0].strip().strip('"').strip("'")
+            resp = self._post([{"role": "user", "content": prompt}], max_tokens=60)
+            rewritten = resp.json()["choices"][0]["message"]["content"].strip().split("\n")[0].strip().strip('"').strip("'")
             print(f"   ✏️  Reformulée : {rewritten!r}")
             return rewritten if rewritten else query
         except Exception as e:
@@ -85,11 +89,21 @@ RÉPONSE (courte et directe) :"""
         for msg in (history or []):
             messages.append({"role": msg["role"], "content": msg["content"]})
         messages.append({"role": "user", "content": prompt})
-        with self.client.chat.stream(model=self.model, messages=messages, temperature=0.0) as stream:
-            for event in stream:
-                token = event.data.choices[0].delta.content
-                if token:
-                    yield token
+
+        payload = {"model": self.model, "messages": messages, "temperature": 0.0, "stream": True}
+        with httpx.stream("POST", MISTRAL_URL, headers=self.headers, json=payload, timeout=120) as resp:
+            for line in resp.iter_lines():
+                if not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    token = json.loads(data)["choices"][0]["delta"].get("content", "")
+                    if token:
+                        yield token
+                except Exception:
+                    continue
 
     def generate_answer(self, query: str, results: Dict, history: list = None) -> str:
         print(f"\n📝 Génération [{self.domain.upper()}] : '{query}'")
@@ -101,8 +115,8 @@ RÉPONSE (courte et directe) :"""
             for msg in (history or []):
                 messages.append({"role": msg["role"], "content": msg["content"]})
             messages.append({"role": "user", "content": prompt})
-            resp = self.client.chat.complete(model=self.model, messages=messages, temperature=0.0)
-            return resp.choices[0].message.content
+            resp = self._post(messages)
+            return resp.json()["choices"][0]["message"]["content"]
         except Exception as e:
             return f"❌ Erreur lors de la génération: {e}"
 
