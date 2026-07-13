@@ -7,3 +7,7 @@ chroma_legal_db/
 chroma_db/
 temp_repo/
 envRag/
+admin.db
+admin.db-journal
+admin.db-wal
+admin.db-shm

@@ -1,5 +1,8 @@
 """
 Indexation d'un client spécifique sans démarrer le serveur.
+Source de vérité : admin.db (store.py) — les clients créés depuis le
+back-office /admin sont donc visibles ici aussi, pas seulement ceux du
+seed initial clients.py.
 
 Usage :
   python index_client.py --list
@@ -9,8 +12,12 @@ Usage :
   python index_client.py --key local --mode both --reset
 """
 import argparse
-from clients import CLIENTS, LOCAL
+import store
+from legal_rag import config
 from legal_rag.pipeline import IngestionPipeline
+
+store.init_db()
+config.sync_from_store()
 
 parser = argparse.ArgumentParser(description="Ré-indexation d'un corpus client")
 parser.add_argument("--key",   help="Clé API du client (ou 'local')")
@@ -21,40 +28,33 @@ parser.add_argument("--list",  action="store_true", help="Lister les clients dis
 args = parser.parse_args()
 
 if args.list:
-    print("\n📋 Clients configurés :")
-    for key, cfg in CLIENTS.items():
-        web = ", ".join(cfg.get("web_sources", [])) or "—"
-        print(f"  {cfg['name']:<25} clé: {key}")
-        print(f"    corpus : {cfg['corpus']}")
-        print(f"    web    : {web}")
-    print(f"\n  {'local':<25} clé: local")
-    print(f"    corpus : {LOCAL['corpus']}")
+    print("\n📋 Clients configurés (admin.db) :")
+    for cfg in store.list_clients():
+        urls = store.list_url_strings(cfg["key"])
+        print(f"  {cfg['name']:<25} clé: {cfg['key']}")
+        print(f"    corpus : {cfg['corpus_dir']}")
+        print(f"    web    : {', '.join(urls) or '—'}")
     print()
 
 elif args.key:
-    if args.key == "local":
-        cfg = LOCAL
-        name = "local"
-    elif args.key in CLIENTS:
-        cfg = CLIENTS[args.key]
-        name = cfg["name"]
-    else:
+    cfg = store.get_client(args.key)
+    if cfg is None:
         print(f"❌ Clé inconnue : {args.key}")
         print("   Utilisez --list pour voir les clients disponibles")
-        exit(1)
+        raise SystemExit(1)
 
-    print(f"\n🗂️  Indexation : {name}  [mode={args.mode}  reset={args.reset}]")
+    print(f"\n🗂️  Indexation : {cfg['name']}  [mode={args.mode}  reset={args.reset}]")
     p = IngestionPipeline(
         collection_name=cfg["collection"],
         retriever_type="recursive"
     )
     p.ingest_corpus(
-        cfg["corpus"],
+        cfg["corpus_dir"],
         force=args.reset,
-        web_sources=cfg.get("web_sources", []),
+        web_sources=store.list_url_strings(args.key),
         mode=args.mode
     )
-    print(f"\n✅ Terminé : {name}")
+    print(f"\n✅ Terminé : {cfg['name']}")
 
 else:
     parser.print_help()

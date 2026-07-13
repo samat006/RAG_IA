@@ -2,7 +2,7 @@ import json
 from typing import Dict, Any
 from datetime import datetime
 import ollama
-from .config import GENERATION_MODEL, DOMAIN
+from .config import DOMAIN, settings
 
 # ── Prompts d'extraction par domaine ────────────────────────────────────────
 EXTRACTION_PROMPTS = {
@@ -133,7 +133,7 @@ RÉPONDS UNIQUEMENT AVEC LE JSON, AUCUN TEXTE AVANT OU APRÈS."""
 
         try:
             response = ollama.chat(
-                model=GENERATION_MODEL,
+                model=settings.GENERATION_MODEL,
                 messages=[{"role": "user", "content": prompt}],
                 format="json",
                 options={"temperature": 0.0}

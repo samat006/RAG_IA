@@ -1,6 +1,6 @@
 flask
 flask-cors
-chromadb
+chromadb==1.5.8
 ollama
 pdfplumber
 python-dotenv

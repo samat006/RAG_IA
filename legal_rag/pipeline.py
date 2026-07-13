@@ -8,7 +8,7 @@ from .loaders import PDFLoader, XMLLoader, JSONLoader
 from .chunkers import StructuralChunker, MarkdownChunker
 from .indexing import CorpusIndexer
 from .retrieval import ParentDocumentRetriever
-from .config import DOMAIN, chroma_client, USE_OCR, PDF_MODE, WEB_SOURCES, WEB_MODE, WEB_FALLBACK_THRESHOLD, WEB_MAX_PAGES, MAX_CHUNK_SIZE
+from .config import DOMAIN, chroma_client, USE_OCR, WEB_SOURCES, WEB_MAX_PAGES, MAX_CHUNK_SIZE, settings
 from .web_loader import WebLoader
 
 def sliding_window_splitter(text, chunk_size, overlap):
@@ -50,12 +50,6 @@ class IngestionPipeline:
         self.retriever_type = retriever_type
         self.collection_name = collection_name
 
-        # Modes qui produisent du Markdown structuré → MarkdownChunker (découpe sur ##)
-        if PDF_MODE in ("docling", "markdown"):
-            self.chunker = MarkdownChunker(max_chunk_size=MAX_CHUNK_SIZE, min_chunk_size=100, overlap=0)
-        else:
-            self.chunker = StructuralChunker(max_chunk_size=MAX_CHUNK_SIZE, min_chunk_size=300, overlap=400)
-
         if self.retriever_type == "parent-child":
             self.parent_retriever = ParentDocumentRetriever(
                 collection_name_children=f"{collection_name}_children",
@@ -64,12 +58,23 @@ class IngestionPipeline:
         else:
             self.indexer = CorpusIndexer(collection_name=collection_name)
 
+    def _make_chunker(self):
+        """
+        Choisit le chunker selon settings.PDF_MODE — relu à CHAQUE appel plutôt que
+        mis en cache au constructeur, pour qu'un changement de réglage via
+        /admin/settings s'applique immédiatement aux pipelines déjà chargés,
+        sans redémarrer le serveur.
+        """
+        if settings.PDF_MODE in ("docling", "markdown"):
+            return MarkdownChunker(max_chunk_size=MAX_CHUNK_SIZE, min_chunk_size=100, overlap=0)
+        return StructuralChunker(max_chunk_size=MAX_CHUNK_SIZE, min_chunk_size=300, overlap=400)
+
     def ingest_document(self, file_path: str, doc_type: str, dump_text: bool = False):
         """Méthode générique d'ingestion."""
-        
+
         # 1. Loading (Factory pattern simplifié)
         if doc_type == 'pdf':
-            loader = PDFLoader(file_path, use_ocr=USE_OCR, pdf_mode=PDF_MODE)
+            loader = PDFLoader(file_path, use_ocr=USE_OCR, pdf_mode=settings.PDF_MODE)
             meta_key = 'pdf'
         elif doc_type == 'xml':
             loader = XMLLoader(file_path)
@@ -161,7 +166,7 @@ class IngestionPipeline:
             
         else:
             # Recursive standard
-            chunks = self.chunker.chunk_document(raw_text, metadata)
+            chunks = self._make_chunker().chunk_document(raw_text, metadata)
             self.indexer.index_document(chunks, enrich=False)
 
     def _collection_has_docs(self) -> bool:
@@ -256,7 +261,7 @@ class IngestionPipeline:
             for doc in documents:
                 raw_text = doc["raw_text"]
                 metadata = doc["metadata"]
-                chunks = self.chunker.chunk_document(raw_text, metadata)
+                chunks = self._make_chunker().chunk_document(raw_text, metadata)
                 if self.retriever_type != "parent-child":
                     self.indexer.index_document(chunks, enrich=False)
 
@@ -290,7 +295,7 @@ class IngestionPipeline:
         if self.retriever_type == "parent-child":
             return self.parent_retriever.retrieve_with_parent(query, n_results)
 
-        if WEB_MODE == "separate":
+        if settings.WEB_MODE == "separate":
             return self._search_separate(query, n_results)
         else:
             return self._search_mixed(query, n_results)
@@ -308,11 +313,11 @@ class IngestionPipeline:
         distances = doc_results.get("distances", [[]])[0]
         best_dist = min(distances) if distances else 999
 
-        if best_dist <= WEB_FALLBACK_THRESHOLD:
+        if best_dist <= settings.WEB_FALLBACK_THRESHOLD:
             print(f"   📄 Réponse depuis les documents (dist={best_dist:.3f})")
             return doc_results
 
-        print(f"   🌐 Pas de document pertinent (dist={best_dist:.3f} > {WEB_FALLBACK_THRESHOLD}) → recherche web")
+        print(f"   🌐 Pas de document pertinent (dist={best_dist:.3f} > {settings.WEB_FALLBACK_THRESHOLD}) → recherche web")
         return self._search_mixed(query, n_results)
 
     def _search_mixed(self, query: str, n_results: int) -> dict:

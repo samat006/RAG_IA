@@ -1,0 +1,80 @@
+{% extends "admin_base.html" %}
+{% block title %}Réglages{% endblock %}
+{% block content %}
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+  <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="card">
+      <h2>Génération</h2>
+      <div class="row">
+        <div class="field">
+          <label for="generation_backend">Backend</label>
+          <select id="generation_backend" name="generation_backend">
+            <option value="mistral_api" {% if settings.generation_backend == 'mistral_api' %}selected{% endif %}>API Mistral (cloud)</option>
+            <option value="ollama_local" {% if settings.generation_backend == 'ollama_local' %}selected{% endif %}>Ollama (local)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="generation_model">Modèle</label>
+          <input type="text" id="generation_model" name="generation_model" value="{{ settings.generation_model }}" list="model-suggestions">
+          <datalist id="model-suggestions">
+            <option value="mistral-small-latest">
+            <option value="mistral-large-latest">
+            <option value="mistral">
+            <option value="llama3">
+            <option value="phi3">
+            <option value="gemma2">
+          </datalist>
+        </div>
+      </div>
+      <p class="muted">
+        Clé API Mistral :
+        {% if mistral_key_set %}
+          configurée via la variable d'environnement <code>MISTRAL_API_KEY</code>.
+        {% else %}
+          <strong>non configurée</strong> — définissez <code>MISTRAL_API_KEY</code> côté serveur pour utiliser le backend API.
+        {% endif %}
+        Non éditable ici pour éviter de stocker un secret en clair dans la base.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Réglages RAG avancés</h2>
+      <div class="row">
+        <div class="field">
+          <label for="pdf_mode">Mode d'extraction PDF</label>
+          <select id="pdf_mode" name="pdf_mode">
+            {% for m in ['docling', 'markdown', 'pdfplumber', 'hybrid', 'ocr', 'vision', 'pymupdf'] %}
+            <option value="{{ m }}" {% if settings.pdf_mode == m %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="web_mode">Mode web</label>
+          <select id="web_mode" name="web_mode">
+            <option value="mixed" {% if settings.web_mode == 'mixed' %}selected{% endif %}>Mixed (fusionne docs + web)</option>
+            <option value="separate" {% if settings.web_mode == 'separate' %}selected{% endif %}>Separate (docs en priorité, fallback web)</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="max_distance">Seuil de distance max (chunks)</label>
+          <input type="number" step="0.01" min="0" max="2" id="max_distance" name="max_distance" value="{{ settings.max_distance }}">
+        </div>
+        <div class="field">
+          <label for="web_fallback_threshold">Seuil de bascule web (mode separate)</label>
+          <input type="number" step="0.01" min="0" max="2" id="web_fallback_threshold" name="web_fallback_threshold" value="{{ settings.web_fallback_threshold }}">
+        </div>
+        <div class="field">
+          <label for="n_results">Chunks recherchés (n_results)</label>
+          <input type="number" step="1" min="1" max="50" id="n_results" name="n_results" value="{{ settings.n_results }}">
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn">Enregistrer</button>
+  </form>
+{% endblock %}

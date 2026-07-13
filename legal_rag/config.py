@@ -1,39 +1,65 @@
 import os
 import chromadb
 from chromadb.config import Settings
+from types import SimpleNamespace
 
-# Embedding local (Ollama) — inchangé
+# Embedding local (Ollama) — inchangé, pas de ré-indexation à froid possible
+# sans casser l'espace vectoriel existant : non exposé dans le back-office.
 EMBED_MODEL = "nomic-embed-text"
 
-# Génération via API Mistral
-# Modèles disponibles : mistral-small-latest, mistral-large-latest
-GENERATION_MODEL = os.environ.get("GENERATION_MODEL", "mistral-small-latest")
-MISTRAL_API_KEY  = os.environ.get("MISTRAL_API_KEY", "")
+# Clé API Mistral — reste une variable d'environnement uniquement (jamais
+# stockée en base ni éditable depuis /admin, pour ne pas garder un secret
+# en clair dans un fichier SQLite non chiffré).
+MISTRAL_API_KEY = os.environ.get("MISTRAL_API_KEY", "")
 
-# Domaine du corpus
-# Options : "legal", "municipal", "medical", "rh", "technique"
+# Domaine du corpus (personnalité de l'assistant) — fixe pour ce projet.
+# Options possibles : "legal", "municipal", "medical", "rh", "technique", "tourisme"
 DOMAIN = "tourisme"
 
-# PDF_MODE : stratégie d'extraction pour les PDFs non structurés
-# "docling"    : IBM Docling, analyse layout par deep learning ← MEILLEUR POUR BROCHURES
-# "vision"     : Ollama LLaVA (ollama pull llava)
-# "pdfplumber" : détection auto colonnes
-# "markdown"   : pymupdf4llm → Markdown
-# "hybrid"     : PyMuPDF + OCR par page
-# "ocr"        : OCR Tesseract complet
-# "pymupdf"    : PyMuPDF texte brut
-PDF_MODE = "docling"
+# ── Réglages admin-éditables (back-office) ──────────────────────────────────
+# `settings` est un objet MUTABLE partagé : tous les modules qui font
+# `from .config import settings` reçoivent la MÊME instance, donc une
+# mutation ultérieure d'un attribut (ex: settings.PDF_MODE = "hybrid")
+# est visible partout sans réimport. C'est ce qui permet au back-office de
+# changer ces réglages à chaud, sans redémarrer le serveur.
+#
+# Valeurs par défaut ci-dessous utilisées avant le premier appel à
+# sync_from_store() (ex: scripts CLI qui n'utilisent pas store.py).
+settings = SimpleNamespace(
+    GENERATION_BACKEND="mistral_api",      # "mistral_api" | "ollama_local"
+    GENERATION_MODEL="mistral-small-latest",
+    PDF_MODE="docling",                    # docling|vision|pdfplumber|markdown|hybrid|ocr|pymupdf
+    WEB_MODE="mixed",                      # "separate" | "mixed"
+    MAX_DISTANCE=0.9,
+    WEB_FALLBACK_THRESHOLD=0.6,
+    N_RESULTS=12,
+)
+
+
+def sync_from_store():
+    """Recharge `settings` depuis la base SQLite (store.py).
+    Appelé au démarrage du serveur et après chaque sauvegarde dans /admin/settings."""
+    from store import get_settings
+    db = get_settings()
+    settings.GENERATION_BACKEND = db["generation_backend"]
+    settings.GENERATION_MODEL = db["generation_model"]
+    settings.PDF_MODE = db["pdf_mode"]
+    settings.WEB_MODE = db["web_mode"]
+    settings.MAX_DISTANCE = db["max_distance"]
+    settings.WEB_FALLBACK_THRESHOLD = db["web_fallback_threshold"]
+    settings.N_RESULTS = db["n_results"]
+
 
 # ── Sources web ────────────────────────────────────────────────
-# Liste des sites à indexer. Ajouter autant d'URLs que nécessaire.
-# Mettre [] pour désactiver la recherche web.
+# Vestige : utilisé uniquement en fallback par main.py (CLI de test), quand
+# aucune liste explicite de web_sources n'est fournie. Le serveur Flask et
+# index_client.py passent toujours une liste explicite (store.list_url_strings).
 WEB_SOURCES = [
     "https://tourisme-centrecorse.corsica",
-    # "https://autre-site.com",
 ]
 
 # Nombre max de pages à scraper par site. None = pas de limite.
-WEB_MAX_PAGES = None
+WEB_MAX_PAGES = 3
 
 # URLs à exclure de l'indexation web (correspondance par sous-chaîne).
 # Exemples :
@@ -46,29 +72,10 @@ WEB_EXCLUDED_URLS: list = [
      "/type",
      "/category",
      "/classification",
-    # "/contact",
-    # "/mentions-legales",
-    # "/politique-de-confidentialite",
 ]
 
 # Nombre max de sources (URLs) renvoyées au client avec la réponse.
 SOURCES_MAX_COUNT = 3
-
-# WEB_MODE : comportement quand documents ET web sont disponibles
-# "separate" : cherche d'abord dans les documents locaux ;
-#              si rien de pertinent → cherche sur le web.
-#              Cite toujours la source. Refuse de répondre sans source.
-# "mixed"    : fusionne les résultats documents + web avant de répondre.
-WEB_MODE = "mixed"
-
-# Seuil de distance en dessous duquel on considère qu'un document répond
-# (mode "separate"). Si tous les résultats sont au-dessus → bascule sur le web.
-WEB_FALLBACK_THRESHOLD = 0.6
- 
- 
-# Seuil max de distance L2 pour les chunks envoyés au LLM.
-# 0=identique, 1.41=orthogonal — au-dessus, le chunk est ignoré.
-MAX_DISTANCE = 0.9
 
 # Taille max d'un chunk en caractères (utilisé par chunkers + indexer)
 MAX_CHUNK_SIZE = 2000

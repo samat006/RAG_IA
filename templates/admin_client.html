@@ -1,0 +1,111 @@
+{% extends "admin_base.html" %}
+{% block title %}{{ client.name }}{% endblock %}
+{% block content %}
+  <div class="card">
+    <h1>{{ client.name }}{% if is_local %}<span class="pill">local</span>{% endif %}</h1>
+    <p class="subtitle">
+      Clé API : <code>{{ client.key }}</code> —
+      Corpus : <code>{{ client.corpus_dir }}</code> —
+      Collection : <code>{{ client.collection }}</code>
+    </p>
+    <p class="muted">{{ chunk_count if chunk_count is not none else '—' }} chunk(s) indexé(s)</p>
+  </div>
+
+  <div class="card">
+    <h2>Sources web</h2>
+    {% for u in urls %}
+    <div class="list-item">
+      <span>{{ u.url }}</span>
+      <form method="POST" action="{{ url_for('admin.delete_client_url', key=client.key, url_id=u.id) }}" class="inline"
+            onsubmit="return confirm('Retirer cette URL ?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn secondary">Retirer</button>
+      </form>
+    </div>
+    {% else %}
+    <p class="muted">Aucune source web configurée.</p>
+    {% endfor %}
+    <form method="POST" action="{{ url_for('admin.add_client_url', key=client.key) }}" class="row" style="margin-top:14px">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="field">
+        <label for="url">Ajouter une URL</label>
+        <input type="url" id="url" name="url" placeholder="https://exemple.com" required>
+      </div>
+      <div class="field" style="flex:0 0 auto">
+        <button type="submit" class="btn">Ajouter</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Documents ({{ documents|length }})</h2>
+    {% for d in documents %}
+    <div class="list-item">
+      <span>{{ d }}</span>
+      <form method="POST" action="{{ url_for('admin.delete_document', key=client.key, filename=d) }}" class="inline"
+            onsubmit="return confirm('Supprimer {{ d }} et ses chunks indexés ?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn danger">Supprimer</button>
+      </form>
+    </div>
+    {% else %}
+    <p class="muted">Aucun document.</p>
+    {% endfor %}
+
+    <form method="POST" action="{{ url_for('admin.upload_document', key=client.key) }}"
+          enctype="multipart/form-data" class="row" style="margin-top:14px">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="field">
+        <label for="document">Ajouter un document (pdf, xml, json)</label>
+        <input type="file" id="document" name="document" accept=".pdf,.xml,.json" required>
+      </div>
+      <div class="field" style="flex:0 0 auto">
+        <button type="submit" class="btn">Envoyer et indexer</button>
+      </div>
+    </form>
+    <p class="muted">
+      L'indexation se fait en tâche de fond (ajout incrémental, pas de reconstruction complète) —
+      actualisez la page dans quelques instants pour voir le nombre de chunks mis à jour.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>Ré-indexation complète</h2>
+    <form method="POST" action="{{ url_for('admin.reindex_client', key=client.key) }}" class="row">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="field">
+        <label for="mode">Portée</label>
+        <select id="mode" name="mode">
+          <option value="both">Documents + web</option>
+          <option value="docs">Documents uniquement</option>
+          <option value="web">Web uniquement</option>
+        </select>
+      </div>
+      <div class="field" style="flex:0 0 auto">
+        <button type="submit" class="btn secondary"
+                onclick="return confirm('Ré-indexer entièrement ce client ? Les chunks existants du mode choisi seront supprimés puis reconstruits.')">
+          Réindexer
+        </button>
+      </div>
+    </form>
+  </div>
+
+  {% if not is_local %}
+  <div class="card">
+    <h2>Zone dangereuse</h2>
+    <form method="POST" action="{{ url_for('admin.delete_client_view', key=client.key) }}"
+          onsubmit="return confirm('Supprimer définitivement ce client ?')">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="checkbox-line">
+        <input type="checkbox" id="delete_files" name="delete_files">
+        <label for="delete_files" style="margin:0">Supprimer aussi les fichiers du corpus sur disque</label>
+      </div>
+      <div class="checkbox-line">
+        <input type="checkbox" id="delete_collection" name="delete_collection">
+        <label for="delete_collection" style="margin:0">Supprimer aussi la collection vectorielle ChromaDB</label>
+      </div>
+      <button type="submit" class="btn danger">Supprimer le client</button>
+    </form>
+  </div>
+  {% endif %}
+{% endblock %}

@@ -2,41 +2,43 @@ import re
 import os
 import json
 import time
+import secrets
 import argparse
 import threading
-from flask import Flask, request, jsonify, render_template, Response, stream_with_context, send_from_directory
+from flask import Flask, request, jsonify, render_template, Response, stream_with_context, send_from_directory, session
 from flask_cors import CORS
-from legal_rag.pipeline import IngestionPipeline
-from legal_rag.generation import AnswerGenerator
-from legal_rag.config import MAX_DISTANCE, WEB_EXCLUDED_URLS, SOURCES_MAX_COUNT
-from clients import CLIENTS, LOCAL
+from legal_rag import config
+from legal_rag.config import WEB_EXCLUDED_URLS, SOURCES_MAX_COUNT
+import store
+import runtime
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--model", default="mistral", help="Modèle Ollama")
+parser.add_argument("--model", default=None,
+                     help="Force le modèle de génération pour ce lancement (sinon réglage /admin/settings)")
 parser.add_argument("--port",  default=5000, type=int)
 args, _ = parser.parse_known_args()
-
-os.environ["GENERATION_MODEL"] = args.model
 
 app = Flask(__name__, static_folder="static")
 CORS(app)  # autorise les appels depuis n'importe quel domaine
 
-# ── Pipelines (config dans clients.py) ───────────────────────────────────────
-LOCAL_PIPELINE = IngestionPipeline(collection_name=LOCAL["collection"], retriever_type="recursive")
-LOCAL_PIPELINE.ingest_corpus(LOCAL["corpus"])
+# Signature des sessions/cookies admin. Volontairement PAS de défaut faible
+# statique (contrairement à ADMIN_TOKEN ci-dessous) : un secret de session
+# prévisible permettrait de forger des cookies "admin=True". À défaut de
+# variable d'environnement, on génère un secret aléatoire par démarrage —
+# les sessions ne survivent pas à un redémarrage, ce qui est acceptable pour
+# un panneau d'administration interne.
+app.secret_key = os.environ.get("ADMIN_SESSION_SECRET") or secrets.token_hex(32)
 
-PIPELINES = {}
-for key, cfg in CLIENTS.items():
-    if os.path.exists(cfg["corpus"]):
-        p = IngestionPipeline(collection_name=cfg["collection"], retriever_type="recursive")
-        p.ingest_corpus(cfg["corpus"], web_sources=cfg.get("web_sources", []))
-        PIPELINES[key] = p
-        print(f"✅ Pipeline chargé : {cfg['name']}")
-    else:
-        print(f"⚠️  Dossier introuvable pour {cfg['name']} : {cfg['corpus']}")
+# ── Réglages admin (store.py = source de vérité, clients.py = seed initial) ──
+store.init_db()
+config.sync_from_store()
+if args.model:
+    config.settings.GENERATION_MODEL = args.model  # override ponctuel, non persisté
 
-generator = AnswerGenerator()
-print(f"🤖 Modèle : {generator.model}")
+# ── Pipelines + générateur (état partagé dans runtime.py, voir ce fichier
+# pour le pourquoi : évite un piège de double-import __main__ vs `server`) ──
+runtime.init_pipelines()
+runtime.reload_generator()
 
 GREETINGS = re.compile(
     r"^\s*(bonjour|bonsoir|salut|hello|hi|coucou|hey|bonne\s+journée|bonne\s+soirée)[!?,.\s]*$",
@@ -83,6 +85,10 @@ def _cleanup_sessions():
 
 threading.Thread(target=_cleanup_sessions, daemon=True).start()
 
+# Back-office admin (/admin/*)
+from admin_routes import admin_bp
+app.register_blueprint(admin_bp)
+
 
 @app.route("/")
 def index():
@@ -96,9 +102,10 @@ def admin_index(client_key):
     Body JSON :
       { "mode": "docs"|"web"|"both",  (défaut: "both")
         "reset": true|false }         (défaut: true)
+    Autorisé par X-Admin-Token (CLI/API) OU par une session admin active (back-office).
     """
     token = request.headers.get("X-Admin-Token", "")
-    if token != ADMIN_TOKEN:
+    if token != ADMIN_TOKEN and not session.get("admin"):
         return jsonify({"error": "Non autorisé"}), 401
 
     body  = request.json or {}
@@ -108,26 +115,11 @@ def admin_index(client_key):
     if mode not in ("docs", "web", "both"):
         return jsonify({"error": "mode invalide, valeurs : docs | web | both"}), 400
 
-    if client_key == "local":
-        def run():
-            LOCAL_PIPELINE.ingest_corpus(LOCAL["corpus"], force=reset,
-                                         web_sources=LOCAL.get("web_sources", []), mode=mode)
-            print(f"✅ Re-indexation locale terminée ({mode})")
-        threading.Thread(target=run, daemon=True).start()
-        return jsonify({"status": "indexation démarrée", "client": "local", "mode": mode})
-
-    if client_key not in CLIENTS:
+    cfg = store.get_client(client_key)
+    if cfg is None:
         return jsonify({"error": "Client inconnu"}), 404
 
-    cfg = CLIENTS[client_key]
-
-    def run():
-        p = IngestionPipeline(collection_name=cfg["collection"], retriever_type="recursive")
-        p.ingest_corpus(cfg["corpus"], force=reset, web_sources=cfg.get("web_sources", []), mode=mode)
-        PIPELINES[client_key] = p
-        print(f"✅ Re-indexation terminée : {cfg['name']} ({mode})")
-
-    threading.Thread(target=run, daemon=True).start()
+    runtime.trigger_reindex(client_key, mode=mode, reset=reset)
     return jsonify({"status": "indexation démarrée", "client": cfg["name"], "mode": mode})
 
 
@@ -149,13 +141,10 @@ def test_page():
 
 @app.route("/documents/<client_key>/<path:filename>")
 def serve_document(client_key, filename):
-    if client_key == "local":
-        base = os.path.abspath(LOCAL["corpus"])
-    elif client_key in CLIENTS:
-        base = os.path.abspath(CLIENTS[client_key]["corpus"])
-    else:
+    cfg = store.get_client(client_key)
+    if cfg is None:
         return "Client inconnu", 404
-    return send_from_directory(base, filename)
+    return send_from_directory(os.path.abspath(cfg["corpus_dir"]), filename)
 
 
 @app.route("/ask", methods=["POST"])
@@ -168,12 +157,19 @@ def ask():
     if not query:
         return jsonify({"error": "Question vide"}), 400
 
-    if api_key and api_key not in CLIENTS:
+    client_cfg = store.get_client(api_key) if api_key else None
+    if api_key and client_cfg is None:
         return jsonify({"error": "Clé API invalide"}), 403
 
-    client_name     = CLIENTS[api_key]["name"] if api_key in CLIENTS else "local"
-    active_pipeline = PIPELINES.get(api_key, LOCAL_PIPELINE)
-    history         = get_history(session_id) if session_id else []
+    client_name     = client_cfg["name"] if client_cfg else "local"
+    active_pipeline = runtime.PIPELINES.get(api_key) if api_key else runtime.PIPELINES.get("local")
+    if active_pipeline is None:
+        # Cas rare : client valide mais pipeline pas encore enregistré (juste après
+        # sa création). On refuse explicitement plutôt que de retomber sur le
+        # pipeline local par défaut (ce qui serait une fuite de données inter-client).
+        return jsonify({"error": "Ce client n'est pas encore prêt, réessayez dans un instant"}), 503
+
+    history = get_history(session_id) if session_id else []
     print(f"📥 [{client_name}] {query} (session={session_id[:8] if session_id else 'none'})")
 
     # Salutations
@@ -185,9 +181,9 @@ def ask():
         return Response(stream_with_context(greet()), mimetype="text/event-stream")
 
     # Reformulation si question de suivi, puis retrieval
-    search_query = generator.rewrite_query(query, history)
+    search_query = runtime.generator.rewrite_query(query, history)
     print(f"   🔍 ChromaDB query : {search_query!r}")
-    results = active_pipeline.search(query=search_query, n_results=12)
+    results = active_pipeline.search(query=search_query, n_results=config.settings.N_RESULTS)
 
     no_ids = not results or not results.get("ids") or not results["ids"][0]
     if no_ids:
@@ -195,7 +191,7 @@ def ask():
             yield f"data: {json.dumps({'error': 'no_results'})}\n\n"
         return Response(stream_with_context(no_res()), mimetype="text/event-stream")
 
-    context = generator.build_context(results)
+    context = runtime.generator.build_context(results)
     if not context:
         def no_ctx():
             yield f"data: {json.dumps({'error': 'no_context'})}\n\n"
@@ -207,7 +203,7 @@ def ask():
     seen = set()
     for i, meta in enumerate(results["metadatas"][0]):
         dist = distances[i] if i < len(distances) else None
-        if dist is not None and dist > MAX_DISTANCE:
+        if dist is not None and dist > config.settings.MAX_DISTANCE:
             continue
         raw = meta.get("source_file", "")
         source_type = meta.get("source_type", "")
@@ -228,7 +224,7 @@ def ask():
 
     def generate():
         full = ""
-        for token in generator.stream_answer(query, results, history=history):
+        for token in runtime.generator.stream_answer(query, results, history=history):
             full += token
             yield f"data: {json.dumps({'token': token})}\n\n"
         show_sources = sources if NO_INFO not in full.lower() else []

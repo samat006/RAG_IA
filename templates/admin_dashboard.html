@@ -1,0 +1,46 @@
+{% extends "admin_base.html" %}
+{% block title %}Tableau de bord{% endblock %}
+{% block content %}
+  <div class="card">
+    <h1>Clients</h1>
+    <p class="subtitle">
+      {{ clients|length }} client(s) — backend de génération : <strong>{{ settings.generation_backend }}</strong>
+      ({{ settings.generation_model }})
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Nom</th><th>Clé API</th><th>Documents</th><th>Chunks indexés</th><th>URLs</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in clients %}
+        <tr>
+          <td>{{ c.name }}{% if c.key == 'local' %}<span class="pill">local</span>{% endif %}</td>
+          <td><code>{{ c.key }}</code></td>
+          <td>{{ c.doc_count }}</td>
+          <td>{{ c.chunk_count if c.chunk_count is not none else '—' }}</td>
+          <td>{{ c.url_count }}</td>
+          <td><a class="btn" href="{{ url_for('admin.client_detail', key=c.key) }}">Gérer</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Nouveau client</h2>
+    <form method="POST" action="{{ url_for('admin.new_client') }}" class="row">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="field" style="flex:3">
+        <label for="name">Nom du client</label>
+        <input type="text" id="name" name="name" placeholder="ex : Camping Restonica" required>
+      </div>
+      <div class="field" style="flex:0 0 auto">
+        <button type="submit" class="btn">Créer</button>
+      </div>
+    </form>
+    <p class="muted">Génère automatiquement une clé API, un dossier de corpus et une collection ChromaDB dédiés.</p>
+  </div>
+{% endblock %}
