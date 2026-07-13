@@ -24,6 +24,11 @@ import store
 PIPELINES: dict = {}
 generator: "AnswerGenerator | None" = None
 
+# Port sur lequel /admin/* doit être servi (voir server.py, bloc __main__).
+# admin_routes.py refuse toute requête /admin/* arrivée sur un autre port —
+# défense en profondeur en plus du binding 127.0.0.1 du port admin lui-même.
+ADMIN_PORT: int = 5001
+
 
 def register_client_pipeline(cfg: dict) -> IngestionPipeline:
     """

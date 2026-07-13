@@ -15,7 +15,14 @@ import runtime
 parser = argparse.ArgumentParser()
 parser.add_argument("--model", default=None,
                      help="Force le modèle de génération pour ce lancement (sinon réglage /admin/settings)")
-parser.add_argument("--port",  default=5000, type=int)
+parser.add_argument("--port",  default=5000, type=int,
+                     help="Port PUBLIC (widget, /ask) — doit rester joignable depuis internet")
+parser.add_argument("--host",  default="0.0.0.0",
+                     help="Interface d'écoute du port public (0.0.0.0 = joignable depuis l'extérieur, "
+                          "nécessaire pour que le widget fonctionne sur les sites clients)")
+parser.add_argument("--admin-port", default=5001, type=int, dest="admin_port",
+                     help="Port ADMIN (/admin/*) — n'écoute qu'en 127.0.0.1, jamais exposé sur le réseau. "
+                          "Accès à distance via tunnel SSH : ssh -L <admin-port>:localhost:<admin-port> user@serveur")
 args, _ = parser.parse_known_args()
 
 app = Flask(__name__, static_folder="static")
@@ -237,4 +244,26 @@ def ask():
 
 
 if __name__ == "__main__":
-    app.run(debug=False, port=args.port, threaded=True)
+    from werkzeug.serving import run_simple
+
+    # Le port admin n'écoute qu'en 127.0.0.1 : il n'est jamais exposé sur le
+    # réseau, avec ou sans pare-feu. Depuis une machine distante, on y accède
+    # via un tunnel SSH : ssh -L <admin-port>:localhost:<admin-port> user@serveur
+    # puis http://localhost:<admin-port>/admin/login dans le navigateur local.
+    # Les deux ports servent la MÊME app Flask dans le même process (mêmes
+    # PIPELINES/generator en mémoire, pas de désynchronisation entre "deux
+    # serveurs") — seul le port d'écoute diffère. admin_routes.py vérifie en
+    # plus que les requêtes /admin/* arrivent bien par ce port (voir
+    # ADMIN_PORT dans runtime.py), au cas où le port public serait un jour
+    # ouvert par erreur sur autre chose que 0.0.0.0 restreint.
+    runtime.ADMIN_PORT = args.admin_port
+
+    admin_thread = threading.Thread(
+        target=lambda: run_simple("127.0.0.1", args.admin_port, app, threaded=True),
+        daemon=True,
+    )
+    admin_thread.start()
+    print(f"🔒 Back-office admin (local uniquement) : http://127.0.0.1:{args.admin_port}/admin/login")
+    print(f"🌍 API publique (widget) : http://{args.host}:{args.port}/ask")
+
+    run_simple(args.host, args.port, app, threaded=True)

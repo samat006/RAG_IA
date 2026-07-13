@@ -53,6 +53,19 @@ def csrf_token():
 
 
 @admin_bp.before_request
+def _check_admin_port():
+    """
+    Défense en profondeur : /admin/* ne doit répondre que sur le port admin
+    (voir server.py, qui le lie à 127.0.0.1 uniquement — jamais exposé sur le
+    réseau). Si une requête /admin/* arrive quand même par le port public
+    (ex. mauvaise config réseau future), on renvoie 404 comme si la route
+    n'existait pas, plutôt que de laisser passer jusqu'au login.
+    """
+    if request.environ.get("SERVER_PORT") != str(runtime.ADMIN_PORT):
+        return "Not Found", 404
+
+
+@admin_bp.before_request
 def _check_csrf():
     if request.method == "POST":
         token = request.form.get("csrf_token", "")
